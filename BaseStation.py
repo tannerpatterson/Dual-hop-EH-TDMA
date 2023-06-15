@@ -39,9 +39,9 @@ def __receive_packet(port: str, output: str) -> str:
         port=port,
         baudrate=9600,
     )
-    f = open(f'{output}.txt', 'a')
     raw_data = f'{xbee.readline().decode().rstrip()}'
     compiled_data = f'{datetime.now()}, {raw_data}\n'  # time of received packet, packet data
+    f = open(f'{output}.txt', 'a')
     f.write(compiled_data)
     f.close()
     return compiled_data
