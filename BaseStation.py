@@ -16,9 +16,9 @@ import serial
 time_slot = 1000
 number_of_nodes = 7
 timeout = (number_of_nodes*time_slot*3)
-threshold = 0       #Placeholder till testing
-time_array = [0]*number_of_nodes
-time_diff_array = [0]*(number_of_nodes-1)
+threshold = 0   # Placeholder till testing
+time_array = [0] * number_of_nodes
+time_diff_array = [0] * (number_of_nodes-1)
 state = "SYNC"
 
 # Flags... and stuff I suppose
@@ -33,5 +33,3 @@ start_recv = 0
 recieved_acks = 0
 resync_sent_count = 0
 packet_recieved = False
-
-if __name__ == '__main__':
