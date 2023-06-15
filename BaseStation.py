@@ -7,9 +7,9 @@ Copyright (c) 2023, Ohio Northern University, All rights reserved.
 
 Base Station FSM Implemented in Python to allow for data saving. Should be able to perform all base station duties and
 export data for analysis.
-
 """
 from datetime import datetime
+
 import serial
 
 # Global Variables
@@ -20,7 +20,7 @@ threshold = 0  # Placeholder till testing
 time_array = [0] * number_of_nodes
 time_diff_array = [0] * (number_of_nodes - 1)
 
-# Flags... and stuff I suppose
+# Flags... and stuff I suppose - Eventually not as many global variables once more methods are made
 last_message = ""
 current_message = ""
 previous_resync = 0
