@@ -1,6 +1,5 @@
 """
-Multi-Hop TDMA BASE STATION (Energy Harvesting Simulation) - T.J Smull
-College of Engineering, Ohio Northern University
+Multi-Hop TDMA BASE STATION (Energy Harvesting Simulation) - T.J Smull College of Engineering, Ohio Northern University
 Author: Tanner Patterson, Robert J. Hayek, Dr. Ahmed Ammar
 Date: 06/14/2023
 Copyright (c) 2023, Ohio Northern University, All rights reserved.
