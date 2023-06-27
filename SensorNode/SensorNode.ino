@@ -32,7 +32,7 @@ void(* softwareReset) (void) = 0; //declare reset function @ address 0
 
 // Function to see if energy is still avaible
 bool energyAvailable(int harvestRate) {
-  if(random(0,100 < harvestRate)){
+  if(random(0,100) < harvestRate){
     return true;
   }
   else{
@@ -63,22 +63,21 @@ void nodeFSM() {
       break;
 
     case TRANSMIT:
-      //Transmit Data
+      //Transmit Node Data
       if(!CLUSTER_FLAG){
         Serial.println(GLOBAL_ID);
-        led_state = !led_state;
-        digitalWrite(LED,led_state);
       }
+      //Transmit bulk packet and clear bulk packet array
       else{
         for(int i=0; i<N; i++){
           Serial.write(packet[i]);
-          Serial.write(',');
           packet[i] = 0;
         }
         Serial.println();
-        led_state = !led_state;
-        digitalWrite(LED,led_state);
       }
+      //Change LED state
+      led_state = !led_state;
+      digitalWrite(LED,led_state);
 
       // Check for suffecient energy
       if(energyAvailable(ENERGY_HAVEST_RATE)){
@@ -88,7 +87,7 @@ void nodeFSM() {
         state = DEAD;
       }
       break;
-      
+
     default:
       state = DEAD;
       break;
