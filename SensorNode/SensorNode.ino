@@ -20,12 +20,17 @@ const bool CLUSTER_FLAG = false;  // Whether or not the node serves as a cluster
 /* FLAGS... and stuff*/
 bool sync_received = false;
 bool led_state = false;
+unsigned long wait_time = 0;
+
 
 /* Fancy Custer Head Stuff */
 // Something to store packet to be prepared, arr or a struct I think...doing arr for now
+//Commented out for now
+//enum {N = 5}; // Number of sensor nodes in a cluster, includes cluster head
+//byte packet[1+(2*N)] = {}; // Not sure you can do this
+
 // Cluster Number, Node 1, Recieve Time 1, ... Node N-1, Recive Time N-1, Cluster Head, Send Time 
-enum {N = 5}; // Number of sensor nodes in a cluster, includes cluster head
-byte packet[1+(2*N)] = {}; // Not sure you can do this
+String packet "";
 
 // Allows for a software reset, like the `RED` button, Easy one-liner
 void(* softwareReset) (void) = 0; //declare reset function @ address 0
@@ -63,18 +68,9 @@ void nodeFSM() {
       break;
 
     case TRANSMIT:
-      //Transmit Node Data
-      if(!CLUSTER_FLAG){
-        Serial.println(GLOBAL_ID);
-      }
-      //Transmit bulk packet and clear bulk packet array
-      else{
-        for(int i=0; i<N; i++){
-          Serial.write(packet[i]);
-          packet[i] = 0;
-        }
-        Serial.println();
-      }
+      //Transmit
+      Serial.println(packet);
+      packet = "";
       //Change LED state
       led_state = !led_state;
       digitalWrite(LED,led_state);
@@ -82,6 +78,7 @@ void nodeFSM() {
       // Check for suffecient energy
       if(energyAvailable(ENERGY_HAVEST_RATE)){
       state = WAIT;
+      wait_time = (NETWORK_NUMBER_OF_NODES-1)*TIME_SLOT;
       }
       else{
         state = DEAD;
