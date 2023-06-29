@@ -12,7 +12,7 @@ This repository contains the Arduino programs for implementing a multi-hop energ
   - ORCID: [0000-0002-4015-5897](https://orcid.org/0000-0002-4015-5897)
   - Email: r-hayek@onu.edu
 
-- Dr. Ahmed Ammar
+- Dr. Ahmed Ammar, Assistant Professor of Electrical & Computer Engineering, Ohio Northern University
   - ORCID: [0000-0001-5907-7043](https://orcid.org/0000-0001-5907-7043)
   - Email: a-ammar@onu.edu
 
