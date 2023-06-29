@@ -20,8 +20,10 @@ const bool CLUSTER_FLAG = false;  // Whether or not the node serves as a cluster
 /* FLAGS... and stuff*/
 bool sync_received = false;
 bool led_state = false;
+bool sync_flag = false;
 unsigned long wait_time = 0;
 
+String incomingString ="";
 
 /* Fancy Custer Head Stuff */
 // Something to store packet to be prepared, arr or a struct I think...doing arr for now
@@ -58,13 +60,25 @@ void nodeFSM() {
 
     case SYNC:
       while(!sync_received){
-        
+        if(Serial.available() > 0) {
+          incomingString = Serial.readStringUntil('\r');
+          if(incomingString.substring(0,1).toInt() == CLUSTER_ID && incomingString.substring(1) = "SYNC"){
+
+          }
+
+        }
       }
       break;
 
     case WAIT:
       // TODO: Wait for time slot, wait for resync, wait for stuff...idk just wait
+      if(millis() > wait_time){
+        state = TRANSMIT;
+        // Not sure if you can do this, If not need to add else
+        break;
+      }
 
+      
       break;
 
     case TRANSMIT:
@@ -77,8 +91,9 @@ void nodeFSM() {
 
       // Check for suffecient energy
       if(energyAvailable(ENERGY_HAVEST_RATE)){
-      state = WAIT;
-      wait_time = (NETWORK_NUMBER_OF_NODES-1)*TIME_SLOT;
+        wait_time = millis()+(NETWORK_NUMBER_OF_NODES-1)*TIME_SLOT;
+
+        state = WAIT;
       }
       else{
         state = DEAD;
