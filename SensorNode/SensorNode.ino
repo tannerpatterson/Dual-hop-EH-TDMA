@@ -16,23 +16,20 @@ const int TIME_SLOT = 1000; // In milliseconds (ms) 10^-3
 const int ENERGY_HAVEST_RATE = 100; // Rate at each the energy is harvested
 const int NETWORK_NUMBER_OF_NODES = 7; // Number of nodes on the network
 const bool CLUSTER_FLAG = false;  // Whether or not the node serves as a cluster head
+const String HEADER = GLOBAL_ID + CLUSTER_ID + CLUSTER_FLAG; //Error Checking
 
 /* FLAGS... and stuff*/
-bool sync_received = false;
 bool led_state = false;
-bool sync_flag = false;
 unsigned long wait_time = 0;
-
-String incomingString ="";
 
 /* Fancy Custer Head Stuff */
 // Something to store packet to be prepared, arr or a struct I think...doing arr for now
-//Commented out for now
-//enum {N = 5}; // Number of sensor nodes in a cluster, includes cluster head
-//byte packet[1+(2*N)] = {}; // Not sure you can do this
-
-// Cluster Number, Node 1, Recieve Time 1, ... Node N-1, Recive Time N-1, Cluster Head, Send Time 
 String packet "";
+String incomingString ="";
+String SyncCheck = "";
+int IdRecieved;
+int ClusterNumberReceived;
+
 
 // Allows for a software reset, like the `RED` button, Easy one-liner
 void(* softwareReset) (void) = 0; //declare reset function @ address 0
@@ -59,26 +56,27 @@ void nodeFSM() {
       break;
 
     case SYNC:
-      while(!sync_received){
-        if(Serial.available() > 0) {
-          incomingString = Serial.readStringUntil('\r');
+      if(Serial.available() > 0) {
+        incomingString = Serial.readStringUntil('\r');
 
-          //Might be able to optimize this later
-          String SyncCheck = incomingString.substring(0,1);
+        SyncCheck = incomingString.substring(0,1);
+        IdRecieved = incomingString.substring(0,1).toInt();
+        ClusterNumberReceived = incomingString.substring(1,2).toInt();
 
-          int IdRecieved = incomingString.substring(0,1).toInt();
-          int ClusterNumberReceived = incomingString.substring(1,2).toInt();
+        // Sync Recieved
+        if(SyncCheck == "S"){
+          wait_time = millis()+(GLOBAL_ID-1)*TIME_SLOT;
+          state = WAIT;
+        }
 
-          if(SyncCheck == "S"){
-            wait_time = millis()+(GLOBAL_ID-1)*TIME_SLOT;
-            state = WAIT;
+        // Node/ Cluster Recieved
+        else if(ClusterNumberReceived = CLUSTER_ID){
+          wait_time = millis()+((GLOBAL_ID-IdReceived)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT;
+          if(CLUSTER_FLAG){
+            packet = packet+IdRecieved;
+            packet = packet+millis();
           }
-          if(ClusterNumberReceived = CLUSTER_ID){
-            wait_time = millis()+((GLOBAL_ID-IdReceived)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT
-            state = WAIT;
-          }
-          
-          Serial.flush();
+          state = WAIT;
         }
         Serial.flush();
       }
@@ -86,17 +84,36 @@ void nodeFSM() {
 
     case WAIT:
       // TODO: Wait for time slot, wait for resync, wait for stuff...idk just wait
-      if(millis() > wait_time){
+      if(millis() >= wait_time){
         state = TRANSMIT;
-        // Not sure if you can do this, If not need to add else
-        break;
       }
+      else{
+        if(Serial.available() > 0) {
+          incomingString = Serial.readStringUntil('\r');
 
-      
+          SyncCheck = incomingString.substring(0,1);
+          IdRecieved = incomingString.substring(0,1).toInt();
+          ClusterNumberReceived = incomingString.substring(1,2).toInt();
+
+          // ReSync Recieved
+          if(SyncCheck == "R"){
+            packet = "";
+            state = SYNC;
+          }
+
+          // Store Data
+          if(CLUSTER_FLAG && ClusterNumberReceived == CLUSTER_ID ){
+            packet = packet+IdRecieved;
+            packet = packet+millis();
+          }
+          Serial.flush();
+        }
+      }
       break;
 
     case TRANSMIT:
       //Transmit
+      String BulkPacket = HEADER+packet;
       Serial.println(packet);
       packet = "";
       //Change LED state
@@ -106,7 +123,6 @@ void nodeFSM() {
       // Check for suffecient energy
       if(energyAvailable(ENERGY_HAVEST_RATE)){
         wait_time = millis()+(NETWORK_NUMBER_OF_NODES-1)*TIME_SLOT;
-
         state = WAIT;
       }
       else{
