@@ -62,11 +62,25 @@ void nodeFSM() {
       while(!sync_received){
         if(Serial.available() > 0) {
           incomingString = Serial.readStringUntil('\r');
-          if(incomingString.substring(0,1).toInt() == CLUSTER_ID && incomingString.substring(1) = "SYNC"){
 
+          //Might be able to optimize this later
+          String SyncCheck = incomingString.substring(0,1);
+
+          int IdRecieved = incomingString.substring(0,1).toInt();
+          int ClusterNumberReceived = incomingString.substring(1,2).toInt();
+
+          if(SyncCheck == "S"){
+            wait_time = millis()+(GLOBAL_ID-1)*TIME_SLOT;
+            state = WAIT;
           }
-
+          if(ClusterNumberReceived = CLUSTER_ID){
+            wait_time = millis()+((GLOBAL_ID-IdReceived)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT
+            state = WAIT;
+          }
+          
+          Serial.flush();
         }
+        Serial.flush();
       }
       break;
 
