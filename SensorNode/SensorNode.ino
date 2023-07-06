@@ -15,8 +15,8 @@ const int CLUSTER_ID = 1; // ID corresponding to cluster that node belongs to.
 const int TIME_SLOT = 1000; // In milliseconds (ms) 10^-3
 const int ENERGY_HAVEST_RATE = 100; // Rate at each the energy is harvested
 const int NETWORK_NUMBER_OF_NODES = 7; // Number of nodes on the network
-const bool CLUSTER_FLAG = false;  // Whether or not the node serves as a cluster head
-const String HEADER = GLOBAL_ID + CLUSTER_ID + CLUSTER_FLAG; //Error Checking
+const int CLUSTER_FLAG = 0;  // Whether or not the node serves as a cluster head
+String HEADER = ""+GLOBAL_ID + CLUSTER_ID + CLUSTER_FLAG; //Error Checking
 
 /* FLAGS... and stuff*/
 bool led_state = false;
@@ -24,11 +24,11 @@ unsigned long wait_time = 0;
 
 /* Fancy Custer Head Stuff */
 // Something to store packet to be prepared, arr or a struct I think...doing arr for now
-String packet "";
+String packet ="";
 String incomingString ="";
 String SyncCheck = "";
-int IdRecieved;
-int ClusterNumberReceived;
+int IdRecieved = 0;
+int ClusterNumberReceived= 0;
 
 
 // Allows for a software reset, like the `RED` button, Easy one-liner
@@ -70,9 +70,9 @@ void nodeFSM() {
         }
 
         // Node/ Cluster Recieved
-        else if(ClusterNumberReceived = CLUSTER_ID){
-          wait_time = millis()+((GLOBAL_ID-IdReceived)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT;
-          if(CLUSTER_FLAG){
+        else if(ClusterNumberReceived == CLUSTER_ID){
+          wait_time = millis()+((GLOBAL_ID-IdRecieved)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT;
+          if(CLUSTER_FLAG == 1){
             packet = packet+IdRecieved;
             packet = packet+millis();
           }
@@ -102,7 +102,7 @@ void nodeFSM() {
           }
 
           // Store Data
-          if(CLUSTER_FLAG && ClusterNumberReceived == CLUSTER_ID ){
+          if(CLUSTER_FLAG == 1 && ClusterNumberReceived == CLUSTER_ID ){
             packet = packet+IdRecieved;
             packet = packet+millis();
           }
@@ -114,7 +114,7 @@ void nodeFSM() {
     case TRANSMIT:
       //Transmit
       String BulkPacket = HEADER+packet;
-      Serial.println(packet);
+      Serial.println(BulkPacket);
       packet = "";
       //Change LED state
       led_state = !led_state;
