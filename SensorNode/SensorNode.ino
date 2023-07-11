@@ -10,13 +10,15 @@ Copyright (c) 2023, Ohio Northern University, All rights reserved.
 // FSM for a sensor node or a cluster head.
 
 /* GLOBALS */
-const int GLOBAL_ID = 1;  // Node Global ID on the network.
-const int CLUSTER_ID = 1; /cd c:/ ID corresponding to cluster that node belongs to.
-const int TIME_SLOT = 1000; // In milliseconds (ms) 10^-3
-const int ENERGY_HAVEST_RATE = 100; // Rate at each the energy is harvested
-const int NETWORK_NUMBER_OF_NODES = 7; // Number of nodes on the network
-const int CLUSTER_FLAG = 0;  // Whether or not the node serves as a cluster head
-String HEADER = ""+GLOBAL_ID + CLUSTER_ID + CLUSTER_FLAG; //Error Checking
+const int GLOBAL_ID = 2;  // Node Global ID on the network.
+const int CLUSTER_ID = 1;  // ID corresponding to cluster that node belongs to.
+const int CLUSTER_FLAG = 1;  // Whether or not the node serves as a cluster head
+const int NETWORK_NUMBER_OF_NODES = 4; // Number of nodes on the network
+const int TIME_SLOT = 2000; // In milliseconds (ms) 10^-3
+const long ENERGY_HAVEST_RATE = 100; // Rate at each the energy is harvested
+
+String HEADER = "";
+
 const int ERROR = 0; // Transmission Time
 
 /* FLAGS... and stuff*/
@@ -37,7 +39,7 @@ void(* softwareReset) (void) = 0; //declare reset function @ address 0
 
 // Function to see if energy is still avaible
 bool energyAvailable(int harvestRate) {
-  if(random(0,100) < harvestRate){
+  if(random(0,100) <= harvestRate){
     return true;
   }
   else{
@@ -57,9 +59,9 @@ void nodeFSM() {
       break;
 
     case SYNC:
-      if(Serial.available() > 0) {
+      if(Serial.available() > 0) {   
+        HEADER = HEADER + GLOBAL_ID + CLUSTER_ID + CLUSTER_FLAG; 
         incomingString = Serial.readStringUntil('\r');
-
         SyncCheck = incomingString.substring(0,1);
         IdRecieved = incomingString.substring(0,1).toInt();
         ClusterNumberReceived = incomingString.substring(1,2).toInt();
@@ -74,8 +76,10 @@ void nodeFSM() {
         else if(ClusterNumberReceived == CLUSTER_ID){
           wait_time = millis()+((GLOBAL_ID-IdRecieved)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT;
           if(CLUSTER_FLAG == 1){
-            packet = packet+IdRecieved;
-            packet = packet+millis();
+            packet = packet+SyncCheck;
+
+            // TODO figure out best way to deferiniate this
+            //packet = packet+millis();
           }
           state = WAIT;
         }
@@ -91,21 +95,23 @@ void nodeFSM() {
       else{
         if(Serial.available() > 0) {
           incomingString = Serial.readStringUntil('\r');
-
           SyncCheck = incomingString.substring(0,1);
           IdRecieved = incomingString.substring(0,1).toInt();
           ClusterNumberReceived = incomingString.substring(1,2).toInt();
 
           // ReSync Recieved
           if(SyncCheck == "R"){
+            // TODO: Implement Cluster Recync
             packet = "";
             state = SYNC;
           }
 
           // Store Data
           if(CLUSTER_FLAG == 1 && ClusterNumberReceived == CLUSTER_ID ){
-            packet = packet+IdRecieved;
-            packet = packet+millis();
+            packet = packet+SyncCheck;
+
+            // TODO figure out best way to deferiniate this
+            //packet = packet+millis();
           }
           Serial.flush();
         }
@@ -114,6 +120,7 @@ void nodeFSM() {
 
     case TRANSMIT:
       //Transmit
+
       String BulkPacket = HEADER+packet;
       Serial.println(BulkPacket);
       packet = "";
