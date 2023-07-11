@@ -11,12 +11,13 @@ Copyright (c) 2023, Ohio Northern University, All rights reserved.
 
 /* GLOBALS */
 const int GLOBAL_ID = 1;  // Node Global ID on the network.
-const int CLUSTER_ID = 1; // ID corresponding to cluster that node belongs to.
+const int CLUSTER_ID = 1; /cd c:/ ID corresponding to cluster that node belongs to.
 const int TIME_SLOT = 1000; // In milliseconds (ms) 10^-3
 const int ENERGY_HAVEST_RATE = 100; // Rate at each the energy is harvested
 const int NETWORK_NUMBER_OF_NODES = 7; // Number of nodes on the network
 const int CLUSTER_FLAG = 0;  // Whether or not the node serves as a cluster head
 String HEADER = ""+GLOBAL_ID + CLUSTER_ID + CLUSTER_FLAG; //Error Checking
+const int ERROR = 0; // Transmission Time
 
 /* FLAGS... and stuff*/
 bool led_state = false;
@@ -122,7 +123,7 @@ void nodeFSM() {
 
       // Check for suffecient energy
       if(energyAvailable(ENERGY_HAVEST_RATE)){
-        wait_time = millis()+(NETWORK_NUMBER_OF_NODES-1)*TIME_SLOT;
+        wait_time = millis()+(NETWORK_NUMBER_OF_NODES*TIME_SLOT)-ERROR;
         state = WAIT;
       }
       else{
