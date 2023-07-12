@@ -65,6 +65,7 @@ void nodeFSM() {
         SyncCheck = incomingString.substring(0,1);
         IdRecieved = incomingString.substring(0,1).toInt();
         ClusterNumberReceived = incomingString.substring(1,2).toInt();
+        ClusterHeadCheck = incomingString.substring(2,3);
 
         // Sync Recieved
         if(SyncCheck == "S"){
@@ -86,7 +87,7 @@ void nodeFSM() {
         Serial.flush();
 
         // Cluster head sync based on cluster head
-        else if (CLUSTER_HEAR && CLUSTER_FLAG == 1){
+        else if (CLUSTER_HEAR && CLUSTER_FLAG == 1 && && ClusterHeadCheck == 1){
           wait_time = millis()+((GLOBAL_ID-IdRecieved)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT;
             packet = packet+SyncCheck;
 
