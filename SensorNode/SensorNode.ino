@@ -10,13 +10,13 @@ Copyright (c) 2023, Ohio Northern University, All rights reserved.
 // FSM for a sensor node or a cluster head.
 
 /* GLOBALS */
-const int GLOBAL_ID = 1;  // Node Global ID on the network.
+const int GLOBAL_ID = 2;  // Node Global ID on the network.
 const int CLUSTER_ID = 1;  // ID corresponding to cluster that node belongs to.
 const int CLUSTER_FLAG = 1;  // Whether or not the node serves as a cluster head
-const int NETWORK_NUMBER_OF_NODES = 3; // Number of nodes on the network
+const int NETWORK_NUMBER_OF_NODES = 5; // Number of nodes on the network
 const int TIME_SLOT = 2000; // In milliseconds (ms) 10^-3
 const long ENERGY_HAVEST_RATE = 100; // Rate at each the energy is harvested
-const bool CLUSTER_HEAR = false;  // If cluster flags can hear each other flag
+const bool CLUSTER_HEAR = true;  // If cluster flags can hear each other flag
 String HEADER = "";
 
 const int ERROR = 0; // Transmission Time
