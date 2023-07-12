@@ -16,7 +16,7 @@ const int CLUSTER_FLAG = 1;  // Whether or not the node serves as a cluster head
 const int NETWORK_NUMBER_OF_NODES = 3; // Number of nodes on the network
 const int TIME_SLOT = 2000; // In milliseconds (ms) 10^-3
 const long ENERGY_HAVEST_RATE = 100; // Rate at each the energy is harvested
-const bool CLUSTER_HEAR = FALSE;  // If cluster flags can hear each other flag
+const bool CLUSTER_HEAR = false;  // If cluster flags can hear each other flag
 String HEADER = "";
 
 const int ERROR = 0; // Transmission Time
@@ -32,6 +32,7 @@ String incomingString ="";
 String SyncCheck = "";
 int IdRecieved = 0;
 int ClusterNumberReceived= 0;
+int ClusterHeadCheck = 0;
 
 
 // Allows for a software reset, like the `RED` button, Easy one-liner
@@ -65,7 +66,7 @@ void nodeFSM() {
         SyncCheck = incomingString.substring(0,1);
         IdRecieved = incomingString.substring(0,1).toInt();
         ClusterNumberReceived = incomingString.substring(1,2).toInt();
-        ClusterHeadCheck = incomingString.substring(2,3);
+        ClusterHeadCheck = incomingString.substring(2,3).toInt();
 
         // Sync Recieved
         if(SyncCheck == "S"){
@@ -84,10 +85,9 @@ void nodeFSM() {
           }
           state = WAIT;
         }
-        Serial.flush();
 
-        // Cluster head sync based on cluster head
-        else if (CLUSTER_HEAR && CLUSTER_FLAG == 1 && && ClusterHeadCheck == 1){
+               // Cluster head sync based on cluster head
+        else if (CLUSTER_HEAR && CLUSTER_FLAG == 1 && ClusterHeadCheck == 1){
           wait_time = millis()+((GLOBAL_ID-IdRecieved)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT;
             packet = packet+SyncCheck;
 
@@ -95,6 +95,8 @@ void nodeFSM() {
             //packet = packet+millis();
           state = WAIT;
         }
+        
+        Serial.flush();
       }
       break;
 
