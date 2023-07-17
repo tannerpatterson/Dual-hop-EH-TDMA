@@ -34,7 +34,6 @@ int IdRecieved = 0;
 int ClusterNumberReceived= 0;
 int ClusterHeadCheck = 0;
 
-
 // Allows for a software reset, like the `RED` button, Easy one-liner
 void(* softwareReset) (void) = 0; //declare reset function @ address 0
 
@@ -63,36 +62,49 @@ void nodeFSM() {
       if(Serial.available() > 0) {   
         HEADER = HEADER + GLOBAL_ID + CLUSTER_ID + CLUSTER_FLAG; 
         incomingString = Serial.readStringUntil('\r');
-        SyncCheck = incomingString.substring(0,1);
+
+
         IdRecieved = incomingString.substring(0,1).toInt();
         ClusterNumberReceived = incomingString.substring(1,2).toInt();
+        SyncCheck = incomingString.substring(2,3);
         ClusterHeadCheck = incomingString.substring(2,3).toInt();
 
-        // Sync Recieved
-        if(SyncCheck == "S"){
+        /* Checking for Base Station Messages */
+        // Basestation Sync Recieved
+        if(SyncCheck == "S" && (ClusterNumberReceived == CLUSTER_ID || ClusterNumberReceived == 0)){
           wait_time = millis()+(GLOBAL_ID-1)*TIME_SLOT;
           state = WAIT;
         }
 
+        // Basestation Reset Recieved (Case cluster out of energy)
+        else if(SyncCheck == "R" && ClusterNumberReceived == CLUSTER_ID){
+           wait_time = millis()+((GLOBAL_ID-IdRecieved)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT;
+           state = WAIT;
+        }
+
+        // Basestation Hault Recieved (Case cluster out of order)
+        else if(SyncCheck == "H"){
+          packet = "";
+          state = SYNC;
+        }
+
+
+        /* Checking for Node / Cluster Head Messages */
         // Node/ Cluster Recieved
         else if(ClusterNumberReceived == CLUSTER_ID){
           wait_time = millis()+((GLOBAL_ID-IdRecieved)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT;
           if(CLUSTER_FLAG == 1){
-            packet = packet+SyncCheck;
-
+            packet = packet+IdRecieved;
             // TODO figure out best way to deferiniate this
             //packet = packet+millis();
+            
           }
           state = WAIT;
         }
 
-               // Cluster head sync based on cluster head
+        // Cluster head sync based on cluster head
         else if (CLUSTER_HEAR && CLUSTER_FLAG == 1 && ClusterHeadCheck == 1){
           wait_time = millis()+((GLOBAL_ID-IdRecieved)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT;
-            packet = packet+SyncCheck;
-
-            // TODO figure out best way to deferiniate this
-            //packet = packet+millis();
           state = WAIT;
         }
         
@@ -105,26 +117,33 @@ void nodeFSM() {
       if(millis() >= wait_time){
         state = TRANSMIT;
       }
+
       else{
         if(Serial.available() > 0) {
-          incomingString = Serial.readStringUntil('\r');
-          SyncCheck = incomingString.substring(0,1);
+          incomingString = Serial.readStringUntil('\r');          
           IdRecieved = incomingString.substring(0,1).toInt();
           ClusterNumberReceived = incomingString.substring(1,2).toInt();
+          SyncCheck = incomingString.substring(2,3);
+          ClusterHeadCheck = incomingString.substring(2,3).toInt();
 
-          // ReSync Recieved
-          if(SyncCheck == "R"){
-            // TODO: Implement Cluster Recync
+          // Check for Hault
+          if(SyncCheck == "H"){
             packet = "";
             state = SYNC;
           }
 
-          // Store Data
-          if(CLUSTER_FLAG == 1 && ClusterNumberReceived == CLUSTER_ID ){
-            packet = packet+SyncCheck;
+          // Check for Reset (Case Packet is Out of Order)
+          else if(SyncCheck == "R" && ClusterNumberReceived == CLUSTER_ID){
+            packet = "";
+            wait_time = millis()+((GLOBAL_ID-IdRecieved)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT;
+          }
 
+          // Store Data
+          else if(CLUSTER_FLAG == 1 && ClusterNumberReceived == CLUSTER_ID ){
+            packet = packet+IdRecieved;
             // TODO figure out best way to deferiniate this
             //packet = packet+millis();
+
           }
           Serial.flush();
         }
@@ -133,10 +152,10 @@ void nodeFSM() {
 
     case TRANSMIT:
       //Transmit
-
       String BulkPacket = HEADER+packet;
       Serial.println(BulkPacket);
       packet = "";
+
       //Change LED state
       led_state = !led_state;
       digitalWrite(LED,led_state);
