@@ -9,6 +9,7 @@ Copyright (c) 2023, Ohio Northern University, All rights reserved.
 
 /* GLOBALS */
 const int NETWORK_NUMBER_OF_NODES = 5; // Number of nodes on the network
+const int CLUSTERS =2; // Number of clusters on the network
 const int TIME_SLOT = 2000; // In milliseconds (ms) 10^-3
 const int THRESHOLD = 0; // In milliseconds Threshold for overlap
 const int TIME_OUT = 5; // Number of phases till timeout
@@ -16,6 +17,16 @@ const int TIME_OUT = 5; // Number of phases till timeout
 /* Timers */
 unsigned long CurrentTime = 0;
 unsigned long PreviousTime = 0;
+
+/* Counters */
+int OutOfEnergyCount = 0;
+
+/* Arrays */
+int ClusterHeadIDs [CLUSTERS] ={};
+unsigned long LastRecievedTime [CLUSTERS] = {};
+
+/* Flags */
+bool FullArray = false;
 
 // Allows for a software reset, like the `RED` button, Easy one-liner
 void(* softwareReset) (void) = 0; //declare reset function @ address 0
@@ -38,47 +49,60 @@ bool packetTransmissionError ( ){
 }
 
 
+
+
 void basestationFSM() {
-  static enum { SYNC, ACTIVE, RESYNC } state = SYNC;
+  static enum { START, ACTIVE, RESTART } state = START;
 
   switch (state) {
-    case SYNC:
+    case START:
       CurrentTime = millis();
-      Serial.println("S00");
+      Serial.println("00S");
       state = ACTIVE;
       break;
 
     case ACTIVE:
       // Check for timeout
-      if(millis() >= TIME_OUT* TIME_SLOT* NETWORK_NUMBER_OF_NODES* CurrentTime){
-        state = SYNC;
+      if(LastRecievedTime[OutOfEnergyCount] <= millis()-(TIME_OUT* TIME_SLOT* NETWORK_NUMBER_OF_NODES) && FullArray){
+        int GlobalID = ClusterHeadIDs[OutOfEnergyCount];
+        int ClusterID = OutOfEnergyCount + 1;
+        String packet = GlobalID+ClusterID+"R";
+        Serial.println("packet");
       }
 
       // Check for incoming packets 
       else{
         if(Serial.available() > 0) {  
-          // Check for bulk packet overlap
+
+          // Check for Cluster Head overlap
           PreviousTime = CurrentTime;
           CurrentTime = millis();
           if(clusterTransmissionError(CurrentTime,PreviousTime)){
-            state = RESYNC;
+            state = RESTART;
           }
 
           // Seperate bulk packet and check for errors
           else{
+            
           // TODO: Recieve bulk packet and seperate it
           
           }    
       } 
 
+      Serial.flush();
+      OutOfEnergyCount = (OutOfEnergyCount+1)%CLUSTERS;
       break;
 
-    case RESYNC:
-
+    case RESTART:
+      // Send hault message to network
+      Serial.println("00H");
+      // Arbitrary wait to make sure all nodes are in sync state
+      delay(TIME_SLOT);
+      state = START;
       break;
 
     default:
-      state = SYNC;
+      state = START;
       break;
   }
   }
