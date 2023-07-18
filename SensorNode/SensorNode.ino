@@ -26,13 +26,13 @@ bool led_state = false;
 unsigned long wait_time = 0;
 
 /* Fancy Custer Head Stuff */
-// Something to store packet to be prepared, arr or a struct I think...doing arr for now
 String packet ="";
 String incomingString ="";
 String SyncCheck = "";
 int IdRecieved = 0;
 int ClusterNumberReceived= 0;
 int ClusterHeadCheck = 0;
+int OverlapCheck = 0;
 
 // Allows for a software reset, like the `RED` button, Easy one-liner
 void(* softwareReset) (void) = 0; //declare reset function @ address 0
@@ -68,6 +68,7 @@ void nodeFSM() {
         ClusterNumberReceived = incomingString.substring(1,2).toInt();
         SyncCheck = incomingString.substring(2,3);
         ClusterHeadCheck = incomingString.substring(2,3).toInt();
+        OverlapCheck = incomingString.substring(3,4).toInt();
 
         /* Checking for Base Station Messages */
         // Basestation Sync Recieved
@@ -76,16 +77,16 @@ void nodeFSM() {
           state = WAIT;
         }
 
-        // Basestation Reset Recieved (Case cluster out of energy)
-        else if(SyncCheck == "R" && ClusterNumberReceived == CLUSTER_ID){
+        // Basestation Timeout Recieved (Case cluster out of energy)
+        else if(SyncCheck == "T" && ClusterNumberReceived == CLUSTER_ID){
            wait_time = millis()+((GLOBAL_ID-IdRecieved)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT;
            state = WAIT;
         }
 
-        // Basestation Hault Recieved (Case cluster out of order)
-        else if(SyncCheck == "H"){
-          packet = "";
-          state = SYNC;
+        // Basestation Overlap Recieved (Case cluster out of order)
+        else if(SyncCheck == "O" && (ClusterNumberReceived == CLUSTER_ID || OverlapCheck == CLUSTER_ID)){
+          wait_time = millis()+((GLOBAL_ID-IdRecieved)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT;
+          state = WAIT;
         }
 
 
@@ -94,10 +95,7 @@ void nodeFSM() {
         else if(ClusterNumberReceived == CLUSTER_ID){
           wait_time = millis()+((GLOBAL_ID-IdRecieved)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT;
           if(CLUSTER_FLAG == 1){
-            packet = packet+IdRecieved;
-            // TODO figure out best way to deferiniate this
-            //packet = packet+millis();
-            
+            packet = packet+ "," + IdRecieved + "," + millis();
           }
           state = WAIT;
         }
@@ -125,25 +123,17 @@ void nodeFSM() {
           ClusterNumberReceived = incomingString.substring(1,2).toInt();
           SyncCheck = incomingString.substring(2,3);
           ClusterHeadCheck = incomingString.substring(2,3).toInt();
+          OverlapCheck = incomingString.substring(3,4).toInt();
 
-          // Check for Hault
-          if(SyncCheck == "H"){
-            packet = "";
-            state = SYNC;
-          }
-
-          // Check for Reset (Case Packet is Out of Order)
-          else if(SyncCheck == "R" && ClusterNumberReceived == CLUSTER_ID){
-            packet = "";
-            wait_time = millis()+((GLOBAL_ID-IdRecieved)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT;
-          }
+        // Basestation Overlap Recieved (Case cluster out of order) - MIGHT GET CHANGED
+          if(SyncCheck == "O" && (ClusterNumberReceived == CLUSTER_ID || OverlapCheck == CLUSTER_ID)){
+          packet = "";
+          wait_time = millis()+((GLOBAL_ID-IdRecieved)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT;
+        }
 
           // Store Data
           else if(CLUSTER_FLAG == 1 && ClusterNumberReceived == CLUSTER_ID ){
-            packet = packet+IdRecieved;
-            // TODO figure out best way to deferiniate this
-            //packet = packet+millis();
-
+            packet = packet+ "," + IdRecieved + "," + millis();
           }
           Serial.flush();
         }
