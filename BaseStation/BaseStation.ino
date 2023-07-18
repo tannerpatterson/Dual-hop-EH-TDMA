@@ -82,7 +82,10 @@ void basestationFSM() {
           //Check to make sure it is a CH packet
           incomingString = Serial.readStringUntil('\r');
           IdRecieved = incomingString.substring(0,1).toInt();
+          ClusterIDReceived = incomingString.substring(1,2).toInt();
           ClusterHeadCheck = incomingString.substring(2,3).toInt();
+          incomingString = incomingString.substring(5);
+
           if(ClusterHeadCheck == 1){
           
             // Check for Cluster Head overlap (Might get deleted)
@@ -99,18 +102,57 @@ void basestationFSM() {
                 }
               }
             }
+            else{          
 
-            //Fill Time Array
+              //Fill Time Array (Used for timeout check)
+              (int index = 0; index < NETWORK_NUMBER_OF_NODES; index++){
+                if(IdRecieved == CLUSTERHEADS[index]){
+                  LastRecievedTime[index] = CurrentTime;
+                }
+              }
+              
+              // Seperating the packet into times and IDs
+              // Arrays for Seperating Packets
+              String PacketIDs [NETWORK_NUMBER_OF_NODES];
+              String PacketTimes [NETWORK_NUMBER_OF_NODES];
 
-            // Seperate bulk packet
-            else{            
-            
-            
+              // Counters
+              int StringCount =0;
+              int IDIndex = 0;
+              int TimeIndex = 0;
+
+              // Seperating the packet
+              while(incomingString.length() > 0){
+                int CommaLocation = str.indexOf(',');
+                // Last message
+                if(CommaLocation == -1){
+                  PacketTimes[TimeIndex] = incomingString;
+                }
+                else{
+                  if(StringCount % 2 == 0){
+                    PacketIDs[IDIndex] = incomingString.substring(0,CommaLocation);
+                    IDIndex++;
+                    break;
+                  }
+                  else{
+                    PacketTimes[TimeIndex] = incomingString.substring(0,CommaLocation);
+                    TimeIndex++;      
+                  }
+                }
+                // Update Counter
+                incomingString = incomingString.substring(CommaLocation+1); 
+                StringCount++;
+              }
+
+              // Check Packet for erros
+              
+        
+
+
           
             }  
           }  
       } 
-
       Serial.flush();
       OutOfEnergyCount = (OutOfEnergyCount+1)%CLUSTERS;
       break;
