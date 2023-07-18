@@ -60,7 +60,7 @@ void nodeFSM() {
 
     case SYNC:
       if(Serial.available() > 0) {   
-        HEADER = HEADER + GLOBAL_ID + CLUSTER_ID + CLUSTER_FLAG; 
+        HEADER = ""+ GLOBAL_ID + CLUSTER_ID + CLUSTER_FLAG + '0'; 
         incomingString = Serial.readStringUntil('\r');
 
 
