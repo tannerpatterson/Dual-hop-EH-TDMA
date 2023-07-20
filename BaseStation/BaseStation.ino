@@ -8,12 +8,13 @@ Copyright (c) 2023, Ohio Northern University, All rights reserved.
 #define LED 8
 
 /* GLOBALS */
-const int NETWORK_NUMBER_OF_NODES = 2; // Number of nodes on the network
+const int NETWORK_NUMBER_OF_NODES = 3; // Number of nodes on the network
 const int CLUSTERS = 2; // Number of clusters on the network
 const int TIME_SLOT = 2000; // In milliseconds (ms) 10^-3
 const int THRESHOLD = 1000; // In milliseconds threshold for overlap
 const int TIME_OUT = 3; // Number of phases till timeout
-const int CLUSTERHEADS [CLUSTERS] ={}; // Array full of custer head IDS
+const int CLUSTERHEADS [CLUSTERS] ={2,3}; // Array full of custer head IDS
+unsigned long LastRecievedTime [CLUSTERS] = {0};
 
 /* Timers */
 unsigned long CurrentTime = 0;
@@ -21,10 +22,10 @@ unsigned long PreviousTime = 0;
 
 /* Counters */
 int OutOfEnergyCount = 0;
+int FullArrayCount = 0;
 
-/* Arrays */
-unsigned long LastRecievedTime [CLUSTERS] = {};
-
+/* Flags */
+bool FullArray = false;
 /* Fancy Custer Head Stuff */
 String packet ="";
 String incomingString ="";
@@ -48,14 +49,6 @@ bool clusterTransmissionError (unsigned long Current, unsigned long Previous) {
   }
 }
 
-// Function that checks for overlap within a packet
-bool packetTransmissionError ( ){
-  // TODO Write this
-}
-
-
-
-
 void basestationFSM() {
   static enum { START, ACTIVE, RESTART } state = START;
 
@@ -68,7 +61,7 @@ void basestationFSM() {
 
     case ACTIVE:
       // Check for timeout
-      if(LastRecievedTime[OutOfEnergyCount] <= millis()-(TIME_OUT* TIME_SLOT* NETWORK_NUMBER_OF_NODES)){
+      if(LastRecievedTime[OutOfEnergyCount] <= millis()-(TIME_OUT* TIME_SLOT* NETWORK_NUMBER_OF_NODES) && FullArray){
         int GlobalID = CLUSTERHEADS[OutOfEnergyCount];
         int ClusterID = OutOfEnergyCount + 1;
         String packet = GlobalID+ClusterID+"T0";
@@ -101,13 +94,27 @@ void basestationFSM() {
               }
             }
 
-            else{         
+            else{    
+
+                   
               //Fill Time Array (Used for timeout check) 
-              for(int index = 0; index < NETWORK_NUMBER_OF_NODES; index++){
+              int FullArrayCount = 0;
+              for(int index = 0; index < CLUSTERS; index++){
                 if(IdRecieved == CLUSTERHEADS[index]){
                   LastRecievedTime[index] = CurrentTime;
                 }
+
+                // Used for checking for a full array
+                if(LastRecievedTime[index] != 0){
+                  FullArrayCount++;
+                }
               }
+
+              //Check for full array
+              if(FullArrayCount == CLUSTERS){
+                FullArray = true;
+              }
+
 
               // Seperating the packet and store times
               int StringCount = 0;
@@ -115,7 +122,6 @@ void basestationFSM() {
               int TimeIndex = 0;
 
               while(incomingString.length() > 0){
-                Serial.println("00P0"+incomingString);
                 int CommaLocation = incomingString.indexOf(',');
                 // Last message
                 if(CommaLocation == -1){
