@@ -8,12 +8,11 @@ Copyright (c) 2023, Ohio Northern University, All rights reserved.
 #define LED 8
 
 /* GLOBALS */
-const int NETWORK_NUMBER_OF_NODES = 5; // Number of nodes on the network
-const int CLUSTERS =2; // Number of clusters on the network
+const int NETWORK_NUMBER_OF_NODES = 2; // Number of nodes on the network
+const int CLUSTERS = 2; // Number of clusters on the network
 const int TIME_SLOT = 2000; // In milliseconds (ms) 10^-3
-const int THRESHOLD = 0; // In milliseconds threshold for overlap
-const int TIME_OUT = 5; // Number of phases till timeout
-cont int ERROR = 0; // In milliseconds time for transmission error
+const int THRESHOLD = 1000; // In milliseconds threshold for overlap
+const int TIME_OUT = 3; // Number of phases till timeout
 const int CLUSTERHEADS [CLUSTERS] ={}; // Array full of custer head IDS
 
 /* Timers */
@@ -31,7 +30,7 @@ String packet ="";
 String incomingString ="";
 String SyncCheck = "";
 int IdRecieved = 0;
-int ClusterNumberReceived= 0;
+int ClusterIDReceived= 0;
 int ClusterHeadCheck = 0;
 
 // Allows for a software reset, like the `RED` button, Easy one-liner
@@ -69,7 +68,7 @@ void basestationFSM() {
 
     case ACTIVE:
       // Check for timeout
-      if(LastRecievedTime[OutOfEnergyCount] <= millis()-(TIME_OUT* TIME_SLOT* NETWORK_NUMBER_OF_NODES)-ERROR){
+      if(LastRecievedTime[OutOfEnergyCount] <= millis()-(TIME_OUT* TIME_SLOT* NETWORK_NUMBER_OF_NODES)){
         int GlobalID = CLUSTERHEADS[OutOfEnergyCount];
         int ClusterID = OutOfEnergyCount + 1;
         String packet = GlobalID+ClusterID+"T0";
@@ -84,7 +83,7 @@ void basestationFSM() {
           IdRecieved = incomingString.substring(0,1).toInt();
           ClusterIDReceived = incomingString.substring(1,2).toInt();
           ClusterHeadCheck = incomingString.substring(2,3).toInt();
-          incomingString = incomingString.substring(5);
+          incomingString = incomingString.substring(6);
 
           if(ClusterHeadCheck == 1){
           
@@ -95,48 +94,38 @@ void basestationFSM() {
               for(int index = 0; index < NETWORK_NUMBER_OF_NODES; index++){
                 // Send Overlap Message
                 if(IdRecieved == CLUSTERHEADS[index]){
-                  int Cluster1 = index+1;
-                  int Cluster2 = ((index-1)%CLUSTERS)+1;
-                  String packet = IdRecieved+Cluster1+"H"+Cluster2;
+                  int PreviousCluster = ((index-1)%CLUSTERS)+1;
+                  String packet = IdRecieved+ClusterIDReceived+"O"+PreviousCluster;
                   Serial.println(packet);
                 }
               }
             }
-            else{          
 
-              //Fill Time Array (Used for timeout check)
-              (int index = 0; index < NETWORK_NUMBER_OF_NODES; index++){
+            else{         
+              //Fill Time Array (Used for timeout check) 
+              for(int index = 0; index < NETWORK_NUMBER_OF_NODES; index++){
                 if(IdRecieved == CLUSTERHEADS[index]){
                   LastRecievedTime[index] = CurrentTime;
                 }
               }
-              
-              // Seperating the packet into times and IDs
-              // Arrays for Seperating Packets
-              String PacketIDs [NETWORK_NUMBER_OF_NODES];
-              String PacketTimes [NETWORK_NUMBER_OF_NODES];
 
-              // Counters
-              int StringCount =0;
-              int IDIndex = 0;
+              // Seperating the packet and store times
+              int StringCount = 0;
+              String PacketTimes [NETWORK_NUMBER_OF_NODES];
               int TimeIndex = 0;
 
-              // Seperating the packet
               while(incomingString.length() > 0){
-                int CommaLocation = str.indexOf(',');
+                Serial.println("00P0"+incomingString);
+                int CommaLocation = incomingString.indexOf(',');
                 // Last message
                 if(CommaLocation == -1){
                   PacketTimes[TimeIndex] = incomingString;
                 }
+                // Time messages
                 else{
-                  if(StringCount % 2 == 0){
-                    PacketIDs[IDIndex] = incomingString.substring(0,CommaLocation);
-                    IDIndex++;
-                    break;
-                  }
-                  else{
+                  if(StringCount % 2 == 1){
                     PacketTimes[TimeIndex] = incomingString.substring(0,CommaLocation);
-                    TimeIndex++;      
+                    TimeIndex++;   
                   }
                 }
                 // Update Counter
@@ -145,11 +134,17 @@ void basestationFSM() {
               }
 
               // Check Packet for erros
-              
-        
-
-
-          
+              int LastMessageTime = 0;
+              int CurrentMessageTime = 0;
+              for(int MessageTimeCheck = 0; MessageTimeCheck < TimeIndex; MessageTimeCheck++){
+                  LastMessageTime = CurrentMessageTime;
+                  CurrentMessageTime = PacketTimes[MessageTimeCheck].toInt();
+                  int TimeDifference = CurrentMessageTime - LastMessageTime;
+                  if(TimeDifference <= TIME_SLOT - THRESHOLD){
+                    Serial.println(IdRecieved+ClusterIDReceived+"O0");
+                    break;
+                  }
+              }
             }  
           }  
       } 
