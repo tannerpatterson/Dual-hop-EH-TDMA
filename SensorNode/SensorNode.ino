@@ -10,14 +10,14 @@ Copyright (c) 2023, Ohio Northern University, All rights reserved.
 // FSM for a sensor node or a cluster head.
 
 /* GLOBALS */
-const int GLOBAL_ID = 1;  // Node Global ID on the network.
+const int GLOBAL_ID = 2;  // Node Global ID on the network.
 const int CLUSTER_ID = 1;  // ID corresponding to cluster that node belongs to.
 const int CLUSTER_FLAG = 1;  // Whether or not the node serves as a cluster head
-const int NETWORK_NUMBER_OF_NODES = 2; // Number of nodes on the network
+const int NETWORK_NUMBER_OF_NODES = 3; // Number of nodes on the network
 const int TIME_SLOT = 2000; // In milliseconds (ms) 10^-3
 const long ENERGY_HAVEST_RATE = 100; // Rate at each the energy is harvested
 const bool CLUSTER_HEAR = false;  // If cluster flags can hear each other flag
-String HEADER = "";
+String HEADER = "2110";
 
 const int ERROR = 0; // Transmission Time
 
@@ -59,11 +59,8 @@ void nodeFSM() {
       break;
 
     case SYNC:
-      if(Serial.available() > 0) {   
-        HEADER = ""+ GLOBAL_ID + CLUSTER_ID + CLUSTER_FLAG + '0'; 
+      if(Serial.available() > 0) {    
         incomingString = Serial.readStringUntil('\r');
-
-
         GlobalIDReceived = incomingString.substring(0,1).toInt();
         ClusterIDReceived = incomingString.substring(1,2).toInt();
         SyncCheck = incomingString.substring(2,3);
@@ -141,11 +138,14 @@ void nodeFSM() {
           Serial.flush();
         }
       }
-      break;
+      break;*
 
     case TRANSMIT:
       //Transmit
       String BulkPacket = HEADER+packet;
+      if(CLUSTER_FLAG ==1){
+        BulkPacket = BulkPacket + "," + GLOBAL_ID + "," + millis();
+      }
       Serial.println(BulkPacket);
       packet = "";
 
