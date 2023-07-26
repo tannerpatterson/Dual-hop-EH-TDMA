@@ -10,8 +10,8 @@ Copyright (c) 2023, Ohio Northern University, All rights reserved.
 /* GLOBALS */
 const int NETWORK_NUMBER_OF_NODES = 2; // Number of nodes on the network
 const int CLUSTERS = 2; // Number of clusters on the network
-const int TIME_SLOT = 500; // In milliseconds (ms) 10^-3
-const int THRESHOLD = 50; // In milliseconds threshold for overlap
+const int TIME_SLOT = 1200; // In milliseconds (ms) 10^-3
+const int THRESHOLD = 600; // In milliseconds threshold for overlap
 const int TIME_OUT = 3; // Number of phases till timeout
 const int CLUSTERHEADS [2] ={1,2}; // Array full of custer head IDS
 unsigned long LastRecievedTime [CLUSTERS] = {0};
@@ -41,25 +41,25 @@ int ClusterHeadCheck = 0;
 void(* softwareReset) (void) = 0; //declare reset function @ address 0
 
 // Function that checks for overlap in packets
-bool clusterTransmissionError (unsigned long Current, unsigned long Previous) {
-  unsigned long TimeDif = (Current - Previous);
-  int u = (TIME_SLOT + THRESHOLD);
-  unsigned long Overlap = (unsigned long) u;
-  if(TimeDif <= Overlap){
-    Serial.println("True");
-    return true;    
-  }
-  else{
-    return false;    
-  }
-}
+//bool clusterTransmissionError (unsigned long Current, unsigned long Previous) {
+  //unsigned long TimeDif = (Current - Previous);
+  //int u = (TIME_SLOT + THRESHOLD);
+  //unsigned long Overlap = (unsigned long) u;
+  //if(TimeDif <= Overlap){
+    //Serial.println("True");
+    //return true;    
+  //}
+  //else{
+    //return false;    
+  //}
+//}
 
 void basestationFSM() {
   //static enum { START, ACTIVE, RESTART } state = START;
   static enum { START, ACTIVE} state = START;
   switch (state) {
     case START:
-      delay(500);
+      delay(1200);
       OverlapError = (unsigned long) (TIME_OUT* TIME_SLOT* NETWORK_NUMBER_OF_NODES);
       Serial.println("00S0");
       state = ACTIVE;
@@ -94,13 +94,14 @@ void basestationFSM() {
             // Check for Cluster Head overlap 
             PreviousTime = CurrentTime;
             CurrentTime = millis();
-            if(clusterTransmissionError(CurrentTime,PreviousTime)){
-              Serial.println("Enter");
+            unsigned long TimeDif = (CurrentTime-PreviousTime);
+            int u = (TIME_SLOT - THRESHOLD);
+            unsigned long Overlap = (unsigned long) u;
+            if(TimeDif <= Overlap){
               for(int index = 0; index < CLUSTERS; index++){
                 // Send Overlap Message
-                Serial.println("Transmit");
                 if(IdRecieved == CLUSTERHEADS[index]){
-                  int PreviousCluster = CLUSTERHEADS[((index-1)%CLUSTERS)];
+                  int PreviousCluster = (IdRecieved-1)%CLUSTERS; 
                   packet = packet+IdRecieved+ClusterIDReceived+"O"+PreviousCluster;
                   Serial.println(packet);
                   packet = "";
