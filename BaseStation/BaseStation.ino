@@ -8,13 +8,14 @@ Copyright (c) 2023, Ohio Northern University, All rights reserved.
 #define LED 8
 
 /* GLOBALS */
-const int NETWORK_NUMBER_OF_NODES = 3; // Number of nodes on the network
+const int NETWORK_NUMBER_OF_NODES = 2; // Number of nodes on the network
 const int CLUSTERS = 2; // Number of clusters on the network
-const int TIME_SLOT = 2000; // In milliseconds (ms) 10^-3
-const int THRESHOLD = 1000; // In milliseconds threshold for overlap
+const int TIME_SLOT = 500; // In milliseconds (ms) 10^-3
+const int THRESHOLD = 50; // In milliseconds threshold for overlap
 const int TIME_OUT = 3; // Number of phases till timeout
-const int CLUSTERHEADS [CLUSTERS] ={2,3}; // Array full of custer head IDS
+const int CLUSTERHEADS [2] ={1,2}; // Array full of custer head IDS
 unsigned long LastRecievedTime [CLUSTERS] = {0};
+unsigned long OverlapError = 0;
 
 /* Timers */
 unsigned long CurrentTime = 0;
@@ -26,9 +27,11 @@ int FullArrayCount = 0;
 
 /* Flags */
 bool FullArray = false;
+bool flag = true;
+
 /* Fancy Custer Head Stuff */
 String packet ="";
-String incomingString ="";
+
 String SyncCheck = "";
 int IdRecieved = 0;
 int ClusterIDReceived= 0;
@@ -40,97 +43,103 @@ void(* softwareReset) (void) = 0; //declare reset function @ address 0
 // Function that checks for overlap in packets
 bool clusterTransmissionError (unsigned long Current, unsigned long Previous) {
   unsigned long TimeDif = (Current - Previous);
-  unsigned long Overlap = (unsigned long) (TIME_SLOT - THRESHOLD);
+  int u = (TIME_SLOT + THRESHOLD);
+  unsigned long Overlap = (unsigned long) u;
   if(TimeDif <= Overlap){
-    return true;
+    Serial.println("True");
+    return true;    
   }
   else{
-    return false;
+    return false;    
   }
 }
 
 void basestationFSM() {
-  static enum { START, ACTIVE, RESTART } state = START;
-
+  //static enum { START, ACTIVE, RESTART } state = START;
+  static enum { START, ACTIVE} state = START;
   switch (state) {
     case START:
-      CurrentTime = millis();
+      delay(500);
+      OverlapError = (unsigned long) (TIME_OUT* TIME_SLOT* NETWORK_NUMBER_OF_NODES);
       Serial.println("00S0");
       state = ACTIVE;
       break;
 
     case ACTIVE:
       // Check for timeout
-      if(LastRecievedTime[OutOfEnergyCount] <= millis()-(TIME_OUT* TIME_SLOT* NETWORK_NUMBER_OF_NODES) && FullArray){
+      if(LastRecievedTime[OutOfEnergyCount] <= millis()-OverlapError && FullArray){
+        LastRecievedTime[OutOfEnergyCount] = millis();
         int GlobalID = CLUSTERHEADS[OutOfEnergyCount];
         int ClusterID = OutOfEnergyCount + 1;
-        String packet = GlobalID+ClusterID+"T0";
+        packet = packet+GlobalID+ClusterID+"T0";
         Serial.println(packet);
+        packet = "";
       }
 
       // Check for incoming packets 
       else{
+        String incomingString ="";
         if(Serial.available() > 0) {  
           //Check to make sure it is a CH packet
           incomingString = Serial.readStringUntil('\r');
-          IdRecieved = incomingString.substring(0,1).toInt();
-          ClusterIDReceived = incomingString.substring(1,2).toInt();
-          ClusterHeadCheck = incomingString.substring(2,3).toInt();
+          String r = incomingString.substring(0,1);
+          IdRecieved = r.toInt();
+          String t = incomingString.substring(1,2);
+          ClusterIDReceived = t.toInt();
+          String q = incomingString.substring(2,3);
+          ClusterHeadCheck = q.toInt();
           incomingString = incomingString.substring(6);
 
           if(ClusterHeadCheck == 1){
-          
-            // Check for Cluster Head overlap (Might get deleted)
+            // Check for Cluster Head overlap 
             PreviousTime = CurrentTime;
             CurrentTime = millis();
             if(clusterTransmissionError(CurrentTime,PreviousTime)){
-              for(int index = 0; index < NETWORK_NUMBER_OF_NODES; index++){
+              Serial.println("Enter");
+              for(int index = 0; index < CLUSTERS; index++){
                 // Send Overlap Message
+                Serial.println("Transmit");
                 if(IdRecieved == CLUSTERHEADS[index]){
-                  int PreviousCluster = ((index-1)%CLUSTERS)+1;
-                  String packet = IdRecieved+ClusterIDReceived+"O"+PreviousCluster;
+                  int PreviousCluster = CLUSTERHEADS[((index-1)%CLUSTERS)];
+                  packet = packet+IdRecieved+ClusterIDReceived+"O"+PreviousCluster;
                   Serial.println(packet);
+                  packet = "";
                 }
               }
             }
 
-            else{    
-
-                   
+            else{                       
               //Fill Time Array (Used for timeout check) 
-              int FullArrayCount = 0;
               for(int index = 0; index < CLUSTERS; index++){
                 if(IdRecieved == CLUSTERHEADS[index]){
                   LastRecievedTime[index] = CurrentTime;
-                }
-
-                // Used for checking for a full array
-                if(LastRecievedTime[index] != 0){
                   FullArrayCount++;
                 }
               }
 
               //Check for full array
-              if(FullArrayCount == CLUSTERS){
+              if(FullArrayCount == TIME_OUT* NETWORK_NUMBER_OF_NODES && !FullArray){
                 FullArray = true;
               }
 
 
               // Seperating the packet and store times
               int StringCount = 0;
-              String PacketTimes [NETWORK_NUMBER_OF_NODES];
+              int PacketTimes [NETWORK_NUMBER_OF_NODES] = {};
               int TimeIndex = 0;
 
               while(incomingString.length() > 0){
                 int CommaLocation = incomingString.indexOf(',');
                 // Last message
                 if(CommaLocation == -1){
-                  PacketTimes[TimeIndex] = incomingString;
+                  PacketTimes[TimeIndex] = incomingString.toInt();
+                  break;
                 }
                 // Time messages
                 else{
                   if(StringCount % 2 == 1){
-                    PacketTimes[TimeIndex] = incomingString.substring(0,CommaLocation);
+                    String Holder = incomingString.substring(0,CommaLocation);
+                    PacketTimes[TimeIndex] = Holder.toInt();
                     TimeIndex++;   
                   }
                 }
@@ -140,14 +149,18 @@ void basestationFSM() {
               }
 
               // Check Packet for erros
-              int LastMessageTime = 0;
-              int CurrentMessageTime = 0;
+              unsigned long LastMessageTime = 0;
+              unsigned long CurrentMessageTime = 0;
               for(int MessageTimeCheck = 0; MessageTimeCheck < TimeIndex; MessageTimeCheck++){
                   LastMessageTime = CurrentMessageTime;
-                  CurrentMessageTime = PacketTimes[MessageTimeCheck].toInt();
-                  int TimeDifference = CurrentMessageTime - LastMessageTime;
-                  if(TimeDifference <= TIME_SLOT - THRESHOLD){
-                    Serial.println(IdRecieved+ClusterIDReceived+"O0");
+                  int MessageTime = PacketTimes[MessageTimeCheck];
+                  CurrentMessageTime = (unsigned long)MessageTime;
+                  unsigned long TimeDifference = CurrentMessageTime - LastMessageTime;
+                  unsigned long Error = (unsigned long)(TIME_SLOT - THRESHOLD);
+                  if(TimeDifference <= Error){
+                    packet = packet + IdRecieved+ClusterIDReceived+"O0";
+                    Serial.println(packet);
+                    packet = "";
                     break;
                   }
               }
@@ -156,19 +169,20 @@ void basestationFSM() {
       } 
       Serial.flush();
       OutOfEnergyCount = (OutOfEnergyCount+1)%CLUSTERS;
+      state = ACTIVE;
       break;
 
-    case RESTART:
+    //case RESTART:
       // Send hault message to network
-      Serial.println("00H");
+      //Serial.println("00H");
       // Arbitrary wait to make sure all nodes are in sync state
-      delay(TIME_SLOT);
-      state = START;
-      break;
+      //delay(TIME_SLOT);
+      //state = START;
+      //break;
 
-    default:
-      state = START;
-      break;
+    //default:
+      //state = START;
+      //break;
   }
   }
 }
