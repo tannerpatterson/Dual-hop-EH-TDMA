@@ -10,9 +10,9 @@ Copyright (c) 2023, Ohio Northern University, All rights reserved.
 /* GLOBALS */
 const int NETWORK_NUMBER_OF_NODES = 2; // Number of nodes on the network
 const int CLUSTERS = 2; // Number of clusters on the network
-const int TIME_SLOT = 1200; // In milliseconds (ms) 10^-3
-const int THRESHOLD = 600; // In milliseconds threshold for overlap
-const int TIME_OUT = 3; // Number of phases till timeout
+const int TIME_SLOT = 250; // In milliseconds (ms) 10^-3
+const int THRESHOLD = 50; // In milliseconds threshold for overlap
+const int TIME_OUT = 5; // Number of phases till timeout
 const int CLUSTERHEADS [2] ={1,2}; // Array full of custer head IDS
 unsigned long LastRecievedTime [CLUSTERS] = {0};
 unsigned long OverlapError = 0;
@@ -59,7 +59,7 @@ void basestationFSM() {
   static enum { START, ACTIVE} state = START;
   switch (state) {
     case START:
-      delay(1200);
+      delay(500);
       OverlapError = (unsigned long) (TIME_OUT* TIME_SLOT* NETWORK_NUMBER_OF_NODES);
       Serial.println("00S0");
       state = ACTIVE;
@@ -101,7 +101,8 @@ void basestationFSM() {
               for(int index = 0; index < CLUSTERS; index++){
                 // Send Overlap Message
                 if(IdRecieved == CLUSTERHEADS[index]){
-                  int PreviousCluster = (IdRecieved-1)%CLUSTERS; 
+                  int PreviousIndex = (CLUSTERS + (index-1))%CLUSTERS;
+                  int PreviousCluster = CLUSTERHEADS[PreviousIndex];
                   packet = packet+IdRecieved+ClusterIDReceived+"O"+PreviousCluster;
                   Serial.println(packet);
                   packet = "";
@@ -123,7 +124,7 @@ void basestationFSM() {
                 FullArray = true;
               }
 
-
+              /*
               // Seperating the packet and store times
               int StringCount = 0;
               int PacketTimes [NETWORK_NUMBER_OF_NODES] = {};
@@ -164,13 +165,12 @@ void basestationFSM() {
                     packet = "";
                     break;
                   }
-              }
+              } */
             }  
           }  
       } 
       Serial.flush();
       OutOfEnergyCount = (OutOfEnergyCount+1)%CLUSTERS;
-      state = ACTIVE;
       break;
 
     //case RESTART:
