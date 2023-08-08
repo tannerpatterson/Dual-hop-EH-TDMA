@@ -11,7 +11,7 @@ Copyright (c) 2023, Ohio Northern University, All rights reserved.
 const int NETWORK_NUMBER_OF_NODES = 2; // Number of nodes on the network
 const int CLUSTERS = 2; // Number of clusters on the network
 const int TIME_SLOT = 1000; // In milliseconds (ms) 10^-3
-const int THRESHOLD = 200; // In milliseconds threshold for overlap
+const int THRESHOLD = 100; // In milliseconds threshold for overlap
 const int TIME_OUT = 3; // Number of phases till timeout
 const int CLUSTERHEADS [2] ={1,2}; // Array full of custer head IDS
 unsigned long LastRecievedTime [CLUSTERS] = {0};
@@ -71,9 +71,9 @@ void basestationFSM() {
       // Check for timeout
       unsigned long var = millis()-OverlapError;
       if(LastRecievedTime[OutOfEnergyCount] < var && FullArray){
-        packet = packet + "gggg" + LastRecievedTime[OutOfEnergyCount] + "p" + (millis()-OverlapError);
-        Serial.println(packet);
-        packet = "";
+        //packet = packet + "gggg" + LastRecievedTime[OutOfEnergyCount] + "p" + (millis()-OverlapError);
+        //Serial.println(packet);
+        //packet = "";
         LastRecievedTime[OutOfEnergyCount] = millis();
         int GlobalID = CLUSTERHEADS[OutOfEnergyCount];
         int ClusterID = OutOfEnergyCount + 1;
@@ -88,9 +88,9 @@ void basestationFSM() {
         if(Serial.available() > 0) {  
           //Check to make sure it is a CH packet
           incomingString = Serial.readStringUntil('\r');
-          packet = packet + "zzzz" + incomingString;
-          Serial.println(packet);
-          packet = "";
+          //packet = packet + "zzzz" + incomingString;
+          //Serial.println(packet);
+          //packet = "";
           String r = incomingString.substring(0,1);
           IdRecieved = r.toInt();
           String t = incomingString.substring(1,2);
@@ -110,24 +110,25 @@ void basestationFSM() {
             PreviousTime = CurrentTime;
             CurrentTime = millis();
             unsigned long TimeDif = (CurrentTime-PreviousTime);
-            packet = packet + "dddd" + TimeDif;
-            Serial.println(packet);
-            packet = "";
+            //packet = packet + "dddd" + TimeDif;
+            //Serial.println(packet);
+            //packet = "";
             int u = (TIME_SLOT - THRESHOLD);
             unsigned long Overlap = (unsigned long) u;
 
             if(TimeDif <= Overlap){
               unsigned long tes = Overlap-TimeDif;
-              packet = packet + "ifff" + tes;
-              Serial.println(packet);
-              packet = "";
+              //packet = packet + "ifff" + tes;
+              //Serial.println(packet);
+              //packet = "";
 
               for(int index = 0; index < CLUSTERS; index++){
                 // Send Overlap Message
                 if(IdRecieved == CLUSTERHEADS[index] && IdRecieved != LastId){
-                  packet = packet + "ente";
-                  Serial.println(packet);
-                  packet = "";
+                  //packet = packet + "ente";
+                  //Serial.println(packet);
+                  //packet = "";
+                  LastId = IdRecieved;
                   int PreviousIndex = (CLUSTERS + (index-1))%CLUSTERS;
                   int PreviousCluster = CLUSTERHEADS[PreviousIndex];
                   packet = packet+IdRecieved+ClusterIDReceived+"O"+PreviousCluster;
@@ -139,17 +140,17 @@ void basestationFSM() {
             }
 
             else{        
-              packet = packet + "eeee";
-              Serial.println(packet);
-              packet = "";               
+              //packet = packet + "eeee";
+              //Serial.println(packet);
+              //packet = "";               
               //Fill Time Array (Used for timeout check) 
               for(int index = 0; index < CLUSTERS; index++){
                 if(IdRecieved == CLUSTERHEADS[index]){
                   LastRecievedTime[index] = millis();
                   FullArrayCount++;
-                  packet = packet + "pppp" + LastRecievedTime[index] + "p" + CLUSTERHEADS[index];
-                  Serial.println(packet);
-                  packet = "";
+                  //packet = packet + "pppp" + LastRecievedTime[index] + "p" + CLUSTERHEADS[index];
+                  //Serial.println(packet);
+                  //packet = "";
                 }
               }
               
