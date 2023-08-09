@@ -8,12 +8,12 @@ Copyright (c) 2023, Ohio Northern University, All rights reserved.
 #define LED 8
 
 /* GLOBALS */
-const int NETWORK_NUMBER_OF_NODES = 2; // Number of nodes on the network
+const int NETWORK_NUMBER_OF_NODES = 5; // Number of nodes on the network
 const int CLUSTERS = 2; // Number of clusters on the network
-const int TIME_SLOT = 1000; // In milliseconds (ms) 10^-3
-const int THRESHOLD = 100; // In milliseconds threshold for overlap
+const int TIME_SLOT = 250; // In milliseconds (ms) 10^-3
+const int THRESHOLD = 30; // In milliseconds threshold for overlap
 const int TIME_OUT = 3; // Number of phases till timeout
-const int CLUSTERHEADS [2] ={1,2}; // Array full of custer head IDS
+const int CLUSTERHEADS [2] ={2,5}; // Array full of custer head IDS
 unsigned long LastRecievedTime [CLUSTERS] = {0};
 unsigned long OverlapError = 0;
 
@@ -129,8 +129,7 @@ void basestationFSM() {
                   //Serial.println(packet);
                   //packet = "";
                   LastId = IdRecieved;
-                  int PreviousIndex = (CLUSTERS + (index-1))%CLUSTERS;
-                  int PreviousCluster = CLUSTERHEADS[PreviousIndex];
+                  int PreviousCluster = (index+2)%CLUSTERS);
                   packet = packet+IdRecieved+ClusterIDReceived+"O"+PreviousCluster;
                   Serial.println(packet);
                   packet = "";
