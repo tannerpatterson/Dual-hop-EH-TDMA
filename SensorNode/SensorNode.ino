@@ -10,14 +10,14 @@ Copyright (c) 2023, Ohio Northern University, All rights reserved.
 // FSM for a sensor node or a cluster head.
 
 /* GLOBALS */
-const int GLOBAL_ID = 1;  // Node Global ID on the network.
+const int GLOBAL_ID = 2;  // Node Global ID on the network.
 const int CLUSTER_ID = 1;  // ID corresponding to cluster that node belongs to.
 const int CLUSTER_FLAG = 1;  // Whether or not the node serves as a cluster head
-const int NETWORK_NUMBER_OF_NODES = 2; // Number of nodes on the network
-const int TIME_SLOT = 1000; // In milliseconds (ms) 10^-3
+const int NETWORK_NUMBER_OF_NODES = 5; // Number of nodes on the network
+const int TIME_SLOT = 250; // In milliseconds (ms) 10^-3
 const long ENERGY_HAVEST_RATE = 100; // Rate at each the energy is harvested
 const bool CLUSTER_HEAR = false;  // If cluster flags can hear each other flag
-String HEADER = "1110";
+String HEADER = "2110";
 
 const int ERROR = 0; // Transmission Time
 
@@ -69,7 +69,6 @@ void nodeFSM() {
       if(Serial.available() > 0) { 
           // Timer to remove error and reduce packet size   
           CurrentTime = millis();
-
           incomingString = Serial.readStringUntil('\r');
           String g= incomingString.substring(0,1);         
           GlobalIDReceived = g.toInt();
@@ -92,7 +91,7 @@ void nodeFSM() {
 
         // Basestation Timeout Recieved (Case cluster out of energy)
         else if(SyncCheck == "T" && ClusterIDReceived == CLUSTER_ID){
-          int Wait = ((GLOBAL_ID-GlobalIDReceived)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT;
+          int Wait = ((NETWORK_NUMBER_OF_NODES+GLOBAL_ID-GlobalIDReceived)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT;
           unsigned long WaitMath = (unsigned long) Wait;
           wait_time = CurrentTime+WaitMath;
           state = WAIT;
@@ -101,7 +100,7 @@ void nodeFSM() {
         // Basestation Overlap Recieved (Case cluster out of order)
         else if(SyncCheck == "O" && (ClusterIDReceived == CLUSTER_ID || OverlapCheck == CLUSTER_ID)){
           
-          int Wait = ((GLOBAL_ID-GlobalIDReceived)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT;
+          int Wait = ((NETWORK_NUMBER_OF_NODES+GLOBAL_ID-GlobalIDReceived)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT;
           unsigned long WaitMath = (unsigned long) Wait;
           wait_time = CurrentTime+WaitMath;
           state = WAIT;
@@ -111,7 +110,7 @@ void nodeFSM() {
         /* Checking for Node / Cluster Head Messages */
         // Node/ Cluster Recieved
         else if(ClusterIDReceived == CLUSTER_ID){
-          int Wait = ((GLOBAL_ID-GlobalIDReceived)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT;
+          int Wait = ((NETWORK_NUMBER_OF_NODES+GLOBAL_ID-GlobalIDReceived)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT;
           unsigned long WaitMath = (unsigned long) Wait;
           wait_time = CurrentTime+WaitMath;
           if(CLUSTER_FLAG == 1){
@@ -125,7 +124,7 @@ void nodeFSM() {
 
         // Cluster head sync based on cluster head
         else if (CLUSTER_HEAR && CLUSTER_FLAG == 1 && ClusterHeadCheck == 1){
-          int Wait = ((GLOBAL_ID-GlobalIDReceived)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT;
+          int Wait = ((NETWORK_NUMBER_OF_NODES+GLOBAL_ID-GlobalIDReceived)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT;
           unsigned long WaitMath = (unsigned long) Wait;
           wait_time = CurrentTime+WaitMath;          
           state = WAIT;
