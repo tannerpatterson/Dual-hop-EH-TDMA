@@ -117,7 +117,7 @@ void basestationFSM() {
             unsigned long Overlap = (unsigned long) u;
 
             if(TimeDif <= Overlap){
-              unsigned long tes = Overlap-TimeDif;
+              //unsigned long tes = Overlap-TimeDif;
               //packet = packet + "ifff" + tes;
               //Serial.println(packet);
               //packet = "";
@@ -129,7 +129,7 @@ void basestationFSM() {
                   //Serial.println(packet);
                   //packet = "";
                   LastId = IdRecieved;
-                  int PreviousCluster = (index+2)%CLUSTERS);
+                  int PreviousCluster = (index+2)%CLUSTERS;
                   packet = packet+IdRecieved+ClusterIDReceived+"O"+PreviousCluster;
                   Serial.println(packet);
                   packet = "";
@@ -160,7 +160,6 @@ void basestationFSM() {
                 FullArray = true;
               }
 
-              /*
               // Seperating the packet and store times
               int StringCount = 0;
               int PacketTimes [NETWORK_NUMBER_OF_NODES] = {};
