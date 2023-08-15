@@ -11,7 +11,7 @@ Copyright (c) 2023, Ohio Northern University, All rights reserved.
 const int NETWORK_NUMBER_OF_NODES = 5; // Number of nodes on the network
 const int CLUSTERS = 2; // Number of clusters on the network
 const int TIME_SLOT = 250; // In milliseconds (ms) 10^-3
-const int THRESHOLD = 30; // In milliseconds threshold for overlap
+const int THRESHOLD = 100; // In milliseconds threshold for overlap
 const int TIME_OUT = 3; // Number of phases till timeout
 const int CLUSTERHEADS [2] ={2,5}; // Array full of custer head IDS
 unsigned long LastRecievedTime [CLUSTERS] = {0};
@@ -169,6 +169,9 @@ void basestationFSM() {
                 int CommaLocation = incomingString.indexOf(',');
                 // Last message
                 if(CommaLocation == -1){
+                  //packet = packet + "rrrr" + incomingString;
+                  //Serial.println(packet);
+                  //packet = "";
                   PacketTimes[TimeIndex] = incomingString.toInt();
                   break;
                 }
@@ -187,20 +190,29 @@ void basestationFSM() {
 
               // Check Packet for erros
               unsigned long LastMessageTime = 0;
-              unsigned long CurrentMessageTime = 0;
-              for(int MessageTimeCheck = 0; MessageTimeCheck < TimeIndex; MessageTimeCheck++){
+              unsigned long CurrentMessageTime = (unsigned long) TIME_SLOT;
+              for(int MessageTimeCheck = 0; MessageTimeCheck <= TimeIndex; MessageTimeCheck++){
                   LastMessageTime = CurrentMessageTime;
                   int MessageTime = PacketTimes[MessageTimeCheck];
                   CurrentMessageTime = (unsigned long)MessageTime;
-                  unsigned long TimeDifference = CurrentMessageTime - LastMessageTime;
+                  unsigned long TimeDifference;
+                  if(CurrentMessageTime > LastMessageTime){
+                    TimeDifference = CurrentMessageTime - LastMessageTime;
+                  }
+                  else{
+                    TimeDifference = LastMessageTime - CurrentMessageTime;
+                  }
                   unsigned long Error = (unsigned long)(TIME_SLOT - THRESHOLD);
-                  if(TimeDifference <= Error){
+                  //packet = packet + "pppp" + TimeDifference;
+                  //Serial.println(packet);
+                  //packet = "";
+                  if(TimeDifference >= Error){
                     packet = packet + IdRecieved+ClusterIDReceived+"O0";
                     Serial.println(packet);
                     packet = "";
                     break;
                   }
-              } */
+              } 
             }  
           }  
       } 
