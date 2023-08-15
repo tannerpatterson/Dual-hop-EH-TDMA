@@ -14,12 +14,12 @@ const int GLOBAL_ID = 2;  // Node Global ID on the network.
 const int CLUSTER_ID = 1;  // ID corresponding to cluster that node belongs to.
 const int CLUSTER_FLAG = 1;  // Whether or not the node serves as a cluster head
 const int NETWORK_NUMBER_OF_NODES = 5; // Number of nodes on the network
-const int TIME_SLOT = 250; // In milliseconds (ms) 10^-3
-const long ENERGY_HAVEST_RATE = 100; // Rate at each the energy is harvested
+const int CLUSTER_NODES = 2;
 const bool CLUSTER_HEAR = false;  // If cluster flags can hear each other flag
-String HEADER = "2110";
-
+const int TIME_SLOT = 250; // In milliseconds (ms) 10^-3
 const int ERROR = 0; // Transmission Time
+const long ENERGY_HAVEST_RATE = 100; // Rate at each the energy is harvested
+String HEADER = "2110";
 
 /* FLAGS... and stuff*/
 bool led_state = false;
@@ -29,7 +29,6 @@ bool Trans = false;
 unsigned long CurrentTime = 0;
 unsigned long LastTime = 0;
 unsigned long wait_time = 0;
-
 
 /* Fancy Custer Head Stuff */
 String packet ="";
@@ -115,9 +114,17 @@ void nodeFSM() {
           wait_time = CurrentTime+WaitMath;
           if(CLUSTER_FLAG == 1){
             // Might Remove Node IDs
-            unsigned long dif = CurrentTime-LastTime;
-            LastTime = CurrentTime;
-            packet = packet+ "," + GlobalIDReceived + "," + dif;
+            if(packet == ""){
+              unsigned long E = (unsigned long) ((NETWORK_NUMBER_OF_NODES-CLUSTER_NODES)*TIME_SLOT);
+              unsigned long Dif = CurrentTime-LastTime-E;
+              LastTime = CurrentTime;
+              packet = packet+ "," + GlobalIDReceived + "," + Dif;
+            }
+            else{
+              unsigned long Dif = CurrentTime-LastTime;
+              LastTime = CurrentTime;
+              packet = packet+ "," + GlobalIDReceived + "," + Dif;
+            }
           }
           state = WAIT;
         }
@@ -179,7 +186,7 @@ void nodeFSM() {
           unsigned long WaitMath = (unsigned long) Wait;
           wait_time = CurrentTime+WaitMath;
           state = WAIT;
-        }
+          }
 
           // Store Data
           else if(CLUSTER_FLAG == 1 && ClusterIDReceived == CLUSTER_ID ){
@@ -187,10 +194,19 @@ void nodeFSM() {
             //packet = packet + "SSSS" + millis();
             //Serial.println(packet);
             //packet = "";
-            unsigned long Dif = CurrentTime-LastTime;
-            LastTime = CurrentTime;
-            packet = packet+ "," + GlobalIDReceived + "," + Dif;
+            if(packet == ""){
+              unsigned long E = (unsigned long) ((NETWORK_NUMBER_OF_NODES-CLUSTER_NODES)*TIME_SLOT);
+              unsigned long Dif = CurrentTime-LastTime-E;
+              LastTime = CurrentTime;
+              packet = packet+ "," + GlobalIDReceived + "," + Dif;
+            }
+            else{
+              unsigned long Dif = CurrentTime-LastTime;
+              LastTime = CurrentTime;
+              packet = packet+ "," + GlobalIDReceived + "," + Dif;
+            }
           }
+
           Serial.flush();
         }
         //packet = packet + "DDDD" + millis();
