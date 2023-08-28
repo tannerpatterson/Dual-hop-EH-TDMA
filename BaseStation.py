@@ -8,60 +8,24 @@ Base Station FSM Implemented in Python to allow for data saving. Should be able 
 export data for analysis.
 """
 from datetime import datetime
-
 import serial
 
-# Global Variables
-time_slot = 1000
-number_of_nodes = 7
-timeout = (number_of_nodes * time_slot * 3)
-threshold = 0  # Placeholder till testing
-time_array = [0] * number_of_nodes
-time_diff_array = [0] * (number_of_nodes - 1)
-
-# Flags... and stuff I suppose - Eventually not as many global variables once more methods are made
-last_message = ""
-current_message = ""
-previous_resync = 0
-current_timestamp = 0
-last_timestamp = 0
-packet_count = 0
-last_packet_count = 0
-start_recv = 0
-recieved_acks = 0
-resync_sent_count = 0
-packet_recieved = False
-
-
-# Helper function to receive one packet, append to an output file, and return it to its caller.
-def __receive_packet(port: str, output: str) -> str:
+if __name__ == "__main__":
+    count = 0
+    output_file = input("Enter output file name: ")
+    port = input("Enter serial port: ")
     xbee = serial.Serial(
         port=port,
         baudrate=9600,
     )
-    raw_data = f'{xbee.readline().decode().rstrip()}'
-    compiled_data = f'{datetime.now()}, {raw_data}\n'  # time of received packet, packet data
-    f = open(f'{output}.txt', 'a')
-    f.write(compiled_data)
-    f.close()
-    return compiled_data
-
-
-def fsm():
-    state = 'sync'
-    print("Finite State Machine Method")
-    match state:
-        case 'sync':
-            print('State 1')
-        case 'recv':
-            print("State 2")
-
-        case 'resync':
-            print("State 3")
-        case _:
-            state = 'sync'
-            print('Default state')
-
-
-if __name__ == '__main__':
-    fsm()
+    f = open(f'{output_file}.txt', 'w')
+    while True:
+        try:
+            line = xbee.readline()
+            count = count + 1
+            data = f'{line.decode().rstrip()}'
+            f.write(f'{datetime.now()}, {count}, {data}\n')
+            print(f'{datetime.now()}, {count}, {data}')
+        except KeyboardInterrupt:
+            f.close()
+            break
