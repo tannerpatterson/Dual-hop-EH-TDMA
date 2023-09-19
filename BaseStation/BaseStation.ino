@@ -8,12 +8,13 @@ Copyright (c) 2023, Ohio Northern University, All rights reserved.
 #define LED 8
 
 /* GLOBALS */
-const int NETWORK_NUMBER_OF_NODES = 5; // Number of nodes on the network
-const int CLUSTERS = 2; // Number of clusters on the network
-const int TIME_SLOT = 250; // In milliseconds (ms) 10^-3
-const int THRESHOLD = 100; // In milliseconds threshold for overlap
+const int NETWORK_NUMBER_OF_NODES = 3; // Number of nodes on the network
+const int CLUSTERS =  1; // Number of clusters on the network
+const int TIME_SLOT = 110; // In milliseconds (ms) 10^-3
+const int CLUSTERTHRESHOLD = 60; // In milliseconds threshold for cluster overlap
+const int PACKETTHRESHOLD = 60; // In milliseconds threshold for packet overlap
 const int TIME_OUT = 3; // Number of phases till timeout
-const int CLUSTERHEADS [2] ={2,5}; // Array full of custer head IDS
+const int CLUSTERHEADS [1] ={3}; // Array full of custer head IDS
 unsigned long LastRecievedTime [CLUSTERS] = {0};
 unsigned long OverlapError = 0;
 
@@ -42,26 +43,11 @@ int ClusterHeadCheck = 0;
 // Allows for a software reset, like the `RED` button, Easy one-liner
 void(* softwareReset) (void) = 0; //declare reset function @ address 0
 
-// Function that checks for overlap in packets
-//bool clusterTransmissionError (unsigned long Current, unsigned long Previous) {
-  //unsigned long TimeDif = (Current - Previous);
-  //int u = (TIME_SLOT + THRESHOLD);
-  //unsigned long Overlap = (unsigned long) u;
-  //if(TimeDif <= Overlap){
-    //Serial.println("True");
-    //return true;    
-  //}
-  //else{
-    //return false;    
-  //}
-//}
-
 void basestationFSM() {
-  //static enum { START, ACTIVE, RESTART } state = START;
   static enum { START, ACTIVE} state = START;
   switch (state) {
     case START:
-      OverlapError = (unsigned long) (TIME_OUT* TIME_SLOT* NETWORK_NUMBER_OF_NODES*CLUSTERS);
+      OverlapError = (unsigned long) (TIME_OUT* TIME_SLOT* NETWORK_NUMBER_OF_NODES);
       delay(OverlapError);
       Serial.println("00S0");
       state = ACTIVE;
@@ -71,9 +57,6 @@ void basestationFSM() {
       // Check for timeout
       unsigned long var = millis()-OverlapError;
       if(LastRecievedTime[OutOfEnergyCount] < var && FullArray){
-        //packet = packet + "gggg" + LastRecievedTime[OutOfEnergyCount] + "p" + (millis()-OverlapError);
-        //Serial.println(packet);
-        //packet = "";
         LastRecievedTime[OutOfEnergyCount] = millis();
         int GlobalID = CLUSTERHEADS[OutOfEnergyCount];
         int ClusterID = OutOfEnergyCount + 1;
@@ -88,46 +71,27 @@ void basestationFSM() {
         if(Serial.available() > 0) {  
           //Check to make sure it is a CH packet
           incomingString = Serial.readStringUntil('\r');
-          //packet = packet + "zzzz" + incomingString;
-          //Serial.println(packet);
-          //packet = "";
           String r = incomingString.substring(0,1);
           IdRecieved = r.toInt();
           String t = incomingString.substring(1,2);
           ClusterIDReceived = t.toInt();
           String q = incomingString.substring(2,3);
           ClusterHeadCheck = q.toInt();
-          //packet = packet + "mmmm" + ClusterHeadCheck;
-          //Serial.println(packet);
-          //packet = "";
           incomingString = incomingString.substring(6);
 
           if(ClusterHeadCheck == 1){
             // Check for Cluster Head overlap 
-            //packet = packet + "ch";
-            //Serial.println(packet);
-            //packet = "";
             PreviousTime = CurrentTime;
             CurrentTime = millis();
             unsigned long TimeDif = (CurrentTime-PreviousTime);
-            //packet = packet + "dddd" + TimeDif;
-            //Serial.println(packet);
-            //packet = "";
-            int u = (TIME_SLOT - THRESHOLD);
+            int u = (TIME_SLOT - CLUSTERTHRESHOLD);
             unsigned long Overlap = (unsigned long) u;
 
             if(TimeDif <= Overlap){
-              //unsigned long tes = Overlap-TimeDif;
-              //packet = packet + "ifff" + tes;
-              //Serial.println(packet);
-              //packet = "";
 
               for(int index = 0; index < CLUSTERS; index++){
                 // Send Overlap Message
                 if(IdRecieved == CLUSTERHEADS[index] && IdRecieved != LastId){
-                  //packet = packet + "ente";
-                  //Serial.println(packet);
-                  //packet = "";
                   LastId = IdRecieved;
                   int PreviousCluster = (index+2)%CLUSTERS;
                   packet = packet+IdRecieved+ClusterIDReceived+"O"+PreviousCluster;
@@ -138,18 +102,12 @@ void basestationFSM() {
               }
             }
 
-            else{        
-              //packet = packet + "eeee";
-              //Serial.println(packet);
-              //packet = "";               
+            else{            
               //Fill Time Array (Used for timeout check) 
               for(int index = 0; index < CLUSTERS; index++){
                 if(IdRecieved == CLUSTERHEADS[index]){
                   LastRecievedTime[index] = millis();
                   FullArrayCount++;
-                  //packet = packet + "pppp" + LastRecievedTime[index] + "p" + CLUSTERHEADS[index];
-                  //Serial.println(packet);
-                  //packet = "";
                 }
               }
               
@@ -169,9 +127,6 @@ void basestationFSM() {
                 int CommaLocation = incomingString.indexOf(',');
                 // Last message
                 if(CommaLocation == -1){
-                  //packet = packet + "rrrr" + incomingString;
-                  //Serial.println(packet);
-                  //packet = "";
                   PacketTimes[TimeIndex] = incomingString.toInt();
                   break;
                 }
@@ -194,20 +149,13 @@ void basestationFSM() {
               for(int MessageTimeCheck = 0; MessageTimeCheck <= TimeIndex; MessageTimeCheck++){
                   LastMessageTime = CurrentMessageTime;
                   int MessageTime = PacketTimes[MessageTimeCheck];
+                  if(MessageTime >= TIME_SLOT*NETWORK_NUMBER_OF_NODES){
+                    MessageTime = TIME_SLOT;
+                  }
                   CurrentMessageTime = (unsigned long)MessageTime;
-                  unsigned long TimeDifference;
-                  if(CurrentMessageTime > LastMessageTime){
-                    TimeDifference = CurrentMessageTime - LastMessageTime;
-                  }
-                  else{
-                    TimeDifference = LastMessageTime - CurrentMessageTime;
-                  }
-                  unsigned long Error = (unsigned long)(TIME_SLOT - THRESHOLD);
-                  //packet = packet + "pppp" + TimeDifference;
-                  //Serial.println(packet);
-                  //packet = "";
-                  if(TimeDifference >= Error){
-                    packet = packet + IdRecieved+ClusterIDReceived+"O0";
+                  unsigned long Error = (unsigned long)(TIME_SLOT +(TIME_SLOT - PACKETTHRESHOLD));
+                  if(CurrentMessageTime >= Error || CurrentMessageTime <= PACKETTHRESHOLD){
+                    packet = packet + IdRecieved+ClusterIDReceived+"OP";
                     Serial.println(packet);
                     packet = "";
                     break;
@@ -220,17 +168,9 @@ void basestationFSM() {
       OutOfEnergyCount = (OutOfEnergyCount+1)%CLUSTERS;
       break;
 
-    //case RESTART:
-      // Send hault message to network
-      //Serial.println("00H");
-      // Arbitrary wait to make sure all nodes are in sync state
-      //delay(TIME_SLOT);
-      //state = START;
-      //break;
-
-    //default:
-      //state = START;
-      //break;
+    default:
+      state = START;
+      break;
   }
   }
 }
