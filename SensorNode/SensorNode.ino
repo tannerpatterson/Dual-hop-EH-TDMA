@@ -12,14 +12,13 @@ Copyright (c) 2023, Ohio Northern University, All rights reserved.
 /* GLOBALS */
 const int GLOBAL_ID = 2;  // Node Global ID on the network.
 const int CLUSTER_ID = 1;  // ID corresponding to cluster that node belongs to.
-const int CLUSTER_FLAG = 1;  // Whether or not the node serves as a cluster head
-const int NETWORK_NUMBER_OF_NODES = 5; // Number of nodes on the network
-const int CLUSTER_NODES = 2;
+const int CLUSTER_FLAG = 0;  // Whether or not the node serves as a cluster head
+const int NETWORK_NUMBER_OF_NODES = 3; // Number of nodes on the network
 const bool CLUSTER_HEAR = false;  // If cluster flags can hear each other flag
-const int TIME_SLOT = 250; // In milliseconds (ms) 10^-3
-const int ERROR = 0; // Transmission Time
+const int TIME_SLOT = 100; // In milliseconds (ms) 10^-3
+const int ERROR = 60; // Transmission Time
 const long ENERGY_HAVEST_RATE = 100; // Rate at each the energy is harvested
-String HEADER = "2110";
+String HEADER = "2100"; 
 
 /* FLAGS... and stuff*/
 bool led_state = false;
@@ -64,10 +63,10 @@ void nodeFSM() {
       break;
 
     case SYNC:
-
       if(Serial.available() > 0) { 
           // Timer to remove error and reduce packet size   
           CurrentTime = millis();
+          // Extracting Received Packet and Seperating the header
           incomingString = Serial.readStringUntil('\r');
           String g= incomingString.substring(0,1);         
           GlobalIDReceived = g.toInt();
@@ -80,7 +79,6 @@ void nodeFSM() {
 
         /* Checking for Base Station Messages */
         // Basestation Sync Recieved
-        // Might delete the ClusterIDReceived == CLUSTER_ID
         if(SyncCheck == "S" && (ClusterIDReceived == CLUSTER_ID || ClusterIDReceived == 0)){
           int Wait = (GLOBAL_ID-1)*TIME_SLOT;
           unsigned long WaitMath = (unsigned long) Wait;
@@ -98,8 +96,13 @@ void nodeFSM() {
 
         // Basestation Overlap Recieved (Case cluster out of order)
         else if(SyncCheck == "O" && (ClusterIDReceived == CLUSTER_ID || OverlapCheck == CLUSTER_ID)){
-          
-          int Wait = ((NETWORK_NUMBER_OF_NODES+GLOBAL_ID-GlobalIDReceived)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT;
+          int Wait;
+          if(CLUSTER_FLAG == 1){
+          Wait = (NETWORK_NUMBER_OF_NODES)*TIME_SLOT-ERROR;
+          }
+          else{
+            Wait = (((NETWORK_NUMBER_OF_NODES+GLOBAL_ID-GlobalIDReceived)%NETWORK_NUMBER_OF_NODES))*TIME_SLOT-ERROR;
+          }          
           unsigned long WaitMath = (unsigned long) Wait;
           wait_time = CurrentTime+WaitMath;
           state = WAIT;
@@ -109,13 +112,12 @@ void nodeFSM() {
         /* Checking for Node / Cluster Head Messages */
         // Node/ Cluster Recieved
         else if(ClusterIDReceived == CLUSTER_ID){
-          int Wait = ((NETWORK_NUMBER_OF_NODES+GLOBAL_ID-GlobalIDReceived)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT;
+          int Wait = ((NETWORK_NUMBER_OF_NODES+GLOBAL_ID-GlobalIDReceived)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT-ERROR;
           unsigned long WaitMath = (unsigned long) Wait;
           wait_time = CurrentTime+WaitMath;
           if(CLUSTER_FLAG == 1){
-            // Might Remove Node IDs
             if(packet == ""){
-              unsigned long E = (unsigned long) ((NETWORK_NUMBER_OF_NODES-CLUSTER_NODES)*TIME_SLOT);
+              unsigned long E = (unsigned long) ((NETWORK_NUMBER_OF_NODES-(GLOBAL_ID-GlobalIDReceived+1))*TIME_SLOT);
               unsigned long Dif = CurrentTime-LastTime-E;
               LastTime = CurrentTime;
               packet = packet+ "," + GlobalIDReceived + "," + Dif;
@@ -151,17 +153,8 @@ void nodeFSM() {
 
       else{
         if(!Trans){
-        //packet = packet + "FFFF" + millis();
-        //Serial.println(packet);
-        //packet = "";
         if(Serial.available() > 0) {
-          //packet = packet + "bbbb" + millis();
-          //Serial.println(packet);
-          //packet = "";
           incomingString = Serial.readStringUntil('\r');
-          //packet = packet + "aaaa," + incomingString + ","+millis();
-          //Serial.println(packet);
-          //packet = "";
           String g= incomingString.substring(0,1);
           GlobalIDReceived = g.toInt();
           String c= incomingString.substring(1,2);
@@ -173,12 +166,15 @@ void nodeFSM() {
           
         // Basestation Overlap Recieved (Case cluster out of order) - MIGHT GET CHANGED
           if(SyncCheck == "O" && (ClusterIDReceived == CLUSTER_ID || OverlapCheck == CLUSTER_ID)){
-          //packet = packet + "WWWW" + millis();
-          //Serial.println(packet);
-          //packet = "";
-          int Wait = ((NETWORK_NUMBER_OF_NODES+GLOBAL_ID-GlobalIDReceived)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT;
-          unsigned long WaitMath = (unsigned long) Wait;
-          wait_time = CurrentTime+WaitMath;
+            int Wait;
+            if(CLUSTER_FLAG == 1){
+              Wait = (NETWORK_NUMBER_OF_NODES)*TIME_SLOT-ERROR;
+            }
+            else{
+              Wait = (((NETWORK_NUMBER_OF_NODES+GLOBAL_ID-GlobalIDReceived)%NETWORK_NUMBER_OF_NODES))*TIME_SLOT-ERROR;
+            }
+            unsigned long WaitMath = (unsigned long) Wait;
+            wait_time = CurrentTime+WaitMath;
           }
           
           else if(SyncCheck == "T" && ClusterIDReceived == CLUSTER_ID){
@@ -190,12 +186,8 @@ void nodeFSM() {
 
           // Store Data
           else if(CLUSTER_FLAG == 1 && ClusterIDReceived == CLUSTER_ID ){
-            // Might Remove Node IDs
-            //packet = packet + "SSSS" + millis();
-            //Serial.println(packet);
-            //packet = "";
             if(packet == ""){
-              unsigned long E = (unsigned long) ((NETWORK_NUMBER_OF_NODES-CLUSTER_NODES)*TIME_SLOT);
+              unsigned long E = (unsigned long) ((NETWORK_NUMBER_OF_NODES-(GLOBAL_ID-GlobalIDReceived+1))*TIME_SLOT);
               unsigned long Dif = CurrentTime-LastTime-E;
               LastTime = CurrentTime;
               packet = packet+ "," + GlobalIDReceived + "," + Dif;
@@ -209,9 +201,6 @@ void nodeFSM() {
 
           Serial.flush();
         }
-        //packet = packet + "DDDD" + millis();
-        //Serial.println(packet);
-        //packet = "";
       }
       }
       break;
@@ -221,7 +210,14 @@ void nodeFSM() {
       //Transmit
       String BulkPacket = HEADER+packet;
       if(CLUSTER_FLAG ==1){
-        unsigned long Dif = CurrentTime-LastTime;
+        unsigned long Dif = 0;
+        if(packet == ""){
+          unsigned long E = (unsigned long) ((NETWORK_NUMBER_OF_NODES-1)*TIME_SLOT);
+          Dif = CurrentTime-LastTime-E;
+        }
+        else{
+        Dif = CurrentTime-LastTime;
+        }
         LastTime = CurrentTime;
         BulkPacket = BulkPacket + "," + GLOBAL_ID + "," + Dif;
       }
@@ -234,7 +230,7 @@ void nodeFSM() {
 
       // Check for suffecient energy
       if(energyAvailable(ENERGY_HAVEST_RATE)){
-        int Wait = (NETWORK_NUMBER_OF_NODES*TIME_SLOT)-ERROR;
+        int Wait = (NETWORK_NUMBER_OF_NODES*TIME_SLOT);
         unsigned long WaitMath = (unsigned long) Wait;
         wait_time = CurrentTime+WaitMath;
         Trans = false;
