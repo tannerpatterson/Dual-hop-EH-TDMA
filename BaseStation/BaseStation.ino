@@ -10,18 +10,17 @@ Copyright (c) 2023, Ohio Northern University, All rights reserved.
 /* GLOBALS */
 const int NETWORK_NUMBER_OF_NODES = 3; // Number of nodes on the network
 const int CLUSTERS =  1; // Number of clusters on the network
-const int TIME_SLOT = 110; // In milliseconds (ms) 10^-3
-const int CLUSTERTHRESHOLD = 60; // In milliseconds threshold for cluster overlap
-const int PACKETTHRESHOLD = 60; // In milliseconds threshold for packet overlap
+const int TIME_SLOT = 500; // In milliseconds (ms) 10^-3
+const int CLUSTERTHRESHOLD = 430; // In milliseconds threshold for cluster overlap
+const int PACKETTHRESHOLD = 70; // In milliseconds threshold for packet overlap
 const int TIME_OUT = 3; // Number of phases till timeout
 const int CLUSTERHEADS [1] ={3}; // Array full of custer head IDS
 unsigned long LastRecievedTime [CLUSTERS] = {0};
 unsigned long OverlapError = 0;
 
-/* Timers / Trackers */
+/* Timers */
 unsigned long CurrentTime = 0;
 unsigned long PreviousTime = 0;
-int LastId = 0;
 
 /* Counters */
 int OutOfEnergyCount = 0;
@@ -56,7 +55,7 @@ void basestationFSM() {
     case ACTIVE:
       // Check for timeout
       unsigned long var = millis()-OverlapError;
-      if(LastRecievedTime[OutOfEnergyCount] < var && FullArray){
+      if(LastRecievedTime[OutOfEnergyCount] < var && FullArray && false){
         LastRecievedTime[OutOfEnergyCount] = millis();
         int GlobalID = CLUSTERHEADS[OutOfEnergyCount];
         int ClusterID = OutOfEnergyCount + 1;
@@ -79,7 +78,7 @@ void basestationFSM() {
           ClusterHeadCheck = q.toInt();
           incomingString = incomingString.substring(6);
 
-          if(ClusterHeadCheck == 1){
+          if(ClusterHeadCheck == 1 && IdRecieved!=0 ){
             // Check for Cluster Head overlap 
             PreviousTime = CurrentTime;
             CurrentTime = millis();
@@ -88,18 +87,9 @@ void basestationFSM() {
             unsigned long Overlap = (unsigned long) u;
 
             if(TimeDif <= Overlap){
-
-              for(int index = 0; index < CLUSTERS; index++){
-                // Send Overlap Message
-                if(IdRecieved == CLUSTERHEADS[index] && IdRecieved != LastId){
-                  LastId = IdRecieved;
-                  int PreviousCluster = (index+2)%CLUSTERS;
-                  packet = packet+IdRecieved+ClusterIDReceived+"O"+PreviousCluster;
-                  Serial.println(packet);
-                  packet = "";
-
-                }
-              }
+              packet = packet+IdRecieved+ClusterIDReceived+"OC";
+              Serial.println(packet);
+              packet = "";
             }
 
             else{            
@@ -111,8 +101,6 @@ void basestationFSM() {
                 }
               }
               
-              LastId = IdRecieved;
-
               //Check for full array
               if(FullArrayCount == TIME_OUT* NETWORK_NUMBER_OF_NODES && !FullArray){
                 FullArray = true;
@@ -120,7 +108,7 @@ void basestationFSM() {
 
               // Seperating the packet and store times
               int StringCount = 0;
-              int PacketTimes [NETWORK_NUMBER_OF_NODES] = {};
+              int PacketTimes [NETWORK_NUMBER_OF_NODES] = {0};
               int TimeIndex = 0;
 
               while(incomingString.length() > 0){
@@ -144,16 +132,16 @@ void basestationFSM() {
               }
 
               // Check Packet for erros
-              unsigned long LastMessageTime = 0;
+              if(PacketTimes[1] != 0){
               unsigned long CurrentMessageTime = (unsigned long) TIME_SLOT;
               for(int MessageTimeCheck = 0; MessageTimeCheck <= TimeIndex; MessageTimeCheck++){
-                  LastMessageTime = CurrentMessageTime;
                   int MessageTime = PacketTimes[MessageTimeCheck];
                   if(MessageTime >= TIME_SLOT*NETWORK_NUMBER_OF_NODES){
                     MessageTime = TIME_SLOT;
                   }
                   CurrentMessageTime = (unsigned long)MessageTime;
                   unsigned long Error = (unsigned long)(TIME_SLOT +(TIME_SLOT - PACKETTHRESHOLD));
+
                   if(CurrentMessageTime >= Error || CurrentMessageTime <= PACKETTHRESHOLD){
                     packet = packet + IdRecieved+ClusterIDReceived+"OP";
                     Serial.println(packet);
@@ -162,6 +150,7 @@ void basestationFSM() {
                   }
               } 
             }  
+            }
           }  
       } 
       Serial.flush();
