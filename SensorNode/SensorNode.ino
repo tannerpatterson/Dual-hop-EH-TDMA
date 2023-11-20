@@ -10,19 +10,20 @@ Copyright (c) 2023, Ohio Northern University, All rights reserved.
 // FSM for a sensor node or a cluster head.
 
 /* GLOBALS */
-const int GLOBAL_ID = 2;  // Node Global ID on the network.
+const int GLOBAL_ID = 3;  // Node Global ID on the network.
 const int CLUSTER_ID = 1;  // ID corresponding to cluster that node belongs to.
-const int CLUSTER_FLAG = 0;  // Whether or not the node serves as a cluster head
+const int CLUSTER_FLAG = 1;  // Whether or not the node serves as a cluster head
 const int NETWORK_NUMBER_OF_NODES = 3; // Number of nodes on the network
-const bool CLUSTER_HEAR = false;  // If cluster flags can hear each other flag
-const int TIME_SLOT = 100; // In milliseconds (ms) 10^-3
+const bool CLUSTER_HEAR = true;  // If cluster flags can hear each other flag
+const int TIME_SLOT = 500; // In milliseconds (ms) 10^-3
 const int ERROR = 60; // Transmission Time
 const long ENERGY_HAVEST_RATE = 100; // Rate at each the energy is harvested
-String HEADER = "2100"; 
+String HEADER = "3110"; 
 
 /* FLAGS... and stuff*/
 bool led_state = false;
 bool Trans = false;
+bool firstFlag = false;
 
 /* Timers */
 unsigned long CurrentTime = 0;
@@ -74,8 +75,7 @@ void nodeFSM() {
           ClusterIDReceived = c.toInt();
           SyncCheck = incomingString.substring(2,3);
           ClusterHeadCheck = SyncCheck.toInt();
-          String o =incomingString.substring(3,4);
-          OverlapCheck = o.toInt();
+          String OverlapCheck =incomingString.substring(3,4);
 
         /* Checking for Base Station Messages */
         // Basestation Sync Recieved
@@ -94,24 +94,25 @@ void nodeFSM() {
           state = WAIT;
         }
 
-        // Basestation Overlap Recieved (Case cluster out of order)
-        else if(SyncCheck == "O" && (ClusterIDReceived == CLUSTER_ID || OverlapCheck == CLUSTER_ID)){
-          int Wait;
-          if(CLUSTER_FLAG == 1){
-          Wait = (NETWORK_NUMBER_OF_NODES)*TIME_SLOT-ERROR;
+
+          
+        // Basestation Overlap Recieved (Case cluster out of order) - MIGHT GET CHANGED
+          if(SyncCheck == "O" && (ClusterIDReceived == CLUSTER_ID || OverlapCheck == "C")){
+            int Wait;
+            if(CLUSTER_FLAG == 1 && OverlapCheck != "C"){
+              Wait = (NETWORK_NUMBER_OF_NODES)*TIME_SLOT-ERROR;
+            }
+            else{
+              Wait = (((NETWORK_NUMBER_OF_NODES+GLOBAL_ID-GlobalIDReceived)%NETWORK_NUMBER_OF_NODES))*TIME_SLOT-ERROR;
+            }
+            unsigned long WaitMath = (unsigned long) Wait;
+            wait_time = CurrentTime+WaitMath;
           }
-          else{
-            Wait = (((NETWORK_NUMBER_OF_NODES+GLOBAL_ID-GlobalIDReceived)%NETWORK_NUMBER_OF_NODES))*TIME_SLOT-ERROR;
-          }          
-          unsigned long WaitMath = (unsigned long) Wait;
-          wait_time = CurrentTime+WaitMath;
-          state = WAIT;
-        }
 
 
         /* Checking for Node / Cluster Head Messages */
         // Node/ Cluster Recieved
-        else if(ClusterIDReceived == CLUSTER_ID){
+        else if(ClusterIDReceived == CLUSTER_ID && GlobalIDReceived != 0){
           int Wait = ((NETWORK_NUMBER_OF_NODES+GLOBAL_ID-GlobalIDReceived)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT-ERROR;
           unsigned long WaitMath = (unsigned long) Wait;
           wait_time = CurrentTime+WaitMath;
@@ -161,19 +162,20 @@ void nodeFSM() {
           ClusterIDReceived = c.toInt();
           SyncCheck = incomingString.substring(2,3);
           ClusterHeadCheck = SyncCheck.toInt();
-          String o =incomingString.substring(3,4);
-          OverlapCheck = o.toInt();
+          String OverlapCheck =incomingString.substring(3,4);
           
         // Basestation Overlap Recieved (Case cluster out of order) - MIGHT GET CHANGED
-          if(SyncCheck == "O" && (ClusterIDReceived == CLUSTER_ID || OverlapCheck == CLUSTER_ID)){
+          if(SyncCheck == "O" && (ClusterIDReceived == CLUSTER_ID || OverlapCheck == "C")){
             int Wait;
-            if(CLUSTER_FLAG == 1){
+
+            if(CLUSTER_FLAG == 1 && ClusterIDReceived == CLUSTER_ID){
               Wait = (NETWORK_NUMBER_OF_NODES)*TIME_SLOT-ERROR;
             }
             else{
               Wait = (((NETWORK_NUMBER_OF_NODES+GLOBAL_ID-GlobalIDReceived)%NETWORK_NUMBER_OF_NODES))*TIME_SLOT-ERROR;
             }
             unsigned long WaitMath = (unsigned long) Wait;
+            CurrentTime = millis();
             wait_time = CurrentTime+WaitMath;
           }
           
@@ -185,7 +187,7 @@ void nodeFSM() {
           }
 
           // Store Data
-          else if(CLUSTER_FLAG == 1 && ClusterIDReceived == CLUSTER_ID ){
+          else if(CLUSTER_FLAG == 1 && ClusterIDReceived == CLUSTER_ID && GlobalIDReceived !=0){
             if(packet == ""){
               unsigned long E = (unsigned long) ((NETWORK_NUMBER_OF_NODES-(GLOBAL_ID-GlobalIDReceived+1))*TIME_SLOT);
               unsigned long Dif = CurrentTime-LastTime-E;
@@ -211,9 +213,10 @@ void nodeFSM() {
       String BulkPacket = HEADER+packet;
       if(CLUSTER_FLAG ==1){
         unsigned long Dif = 0;
-        if(packet == ""){
+        if(packet == "" && !firstFlag){
           unsigned long E = (unsigned long) ((NETWORK_NUMBER_OF_NODES-1)*TIME_SLOT);
           Dif = CurrentTime-LastTime-E;
+          firstFlag = true;
         }
         else{
         Dif = CurrentTime-LastTime;
