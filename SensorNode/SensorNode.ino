@@ -8,16 +8,15 @@ Copyright (c) 2023, Ohio Northern University, All rights reserved.
 #define LED 8
 
 // FSM for a sensor node or a cluster head.
-
 /* GLOBALS */
 const int GLOBAL_ID = 3;  // Node Global ID on the network.
 const int CLUSTER_ID = 1;  // ID corresponding to cluster that node belongs to.
 const int CLUSTER_FLAG = 1;  // Whether or not the node serves as a cluster head
 const int NETWORK_NUMBER_OF_NODES = 3; // Number of nodes on the network
 const bool CLUSTER_HEAR = true;  // If cluster flags can hear each other flag
-const int TIME_SLOT = 500; // In milliseconds (ms) 10^-3
+const int TIME_SLOT = 1000; // In milliseconds (ms) 10^-3
 const int ERROR = 60; // Transmission Time
-const long ENERGY_HAVEST_RATE = 100; // Rate at each the energy is harvested
+const long ENERGY_HAVEST_RATE = 80; // Rate at each the energy is harvested
 String HEADER = "3110"; 
 
 /* FLAGS... and stuff*/
@@ -94,7 +93,6 @@ void nodeFSM() {
           state = WAIT;
         }
 
-
           
         // Basestation Overlap Recieved (Case cluster out of order) - MIGHT GET CHANGED
           if(SyncCheck == "O" && (ClusterIDReceived == CLUSTER_ID || OverlapCheck == "C")){
@@ -108,7 +106,6 @@ void nodeFSM() {
             unsigned long WaitMath = (unsigned long) Wait;
             wait_time = CurrentTime+WaitMath;
           }
-
 
         /* Checking for Node / Cluster Head Messages */
         // Node/ Cluster Recieved
