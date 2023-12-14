@@ -10,8 +10,8 @@ Copyright (c) 2023, Ohio Northern University, All rights reserved.
 /* GLOBALS */
 const int NETWORK_NUMBER_OF_NODES = 3; // Number of nodes on the network
 const int CLUSTERS =  1; // Number of clusters on the network
-const int TIME_SLOT = 500; // In milliseconds (ms) 10^-3
-const int CLUSTERTHRESHOLD = 430; // In milliseconds threshold for cluster overlap
+const int TIME_SLOT = 1000; // In milliseconds (ms) 10^-3
+const int CLUSTERTHRESHOLD = 930; // In milliseconds threshold for cluster overlap
 const int PACKETTHRESHOLD = 70; // In milliseconds threshold for packet overlap
 const int TIME_OUT = 3; // Number of phases till timeout
 const int CLUSTERHEADS [1] ={3}; // Array full of custer head IDS
@@ -36,7 +36,8 @@ String SyncCheck = "";
 int IdRecieved = 0;
 int ClusterIDReceived= 0;
 int ClusterHeadCheck = 0;
-
+int PreIDCheck = 0;
+int PreClusterHeadCheck = 0;
 
 
 // Allows for a software reset, like the `RED` button, Easy one-liner
@@ -70,15 +71,20 @@ void basestationFSM() {
         if(Serial.available() > 0) {  
           //Check to make sure it is a CH packet
           incomingString = Serial.readStringUntil('\r');
-          String r = incomingString.substring(0,1);
-          IdRecieved = r.toInt();
-          String t = incomingString.substring(1,2);
-          ClusterIDReceived = t.toInt();
-          String q = incomingString.substring(2,3);
-          ClusterHeadCheck = q.toInt();
-          incomingString = incomingString.substring(6);
+          String preID = incomingString.substring(0,1);
+          PreIDCheck = preID.toInt();
+          String preCH = incomingString.substring(2,3);
+          PreClusterHeadCheck = preCH.toInt();
+          if(PreClusterHeadCheck == 1 && PreIDCheck != 0){
+            //Extract Data
+            String r = incomingString.substring(0,1);
+            IdRecieved = r.toInt();
+            String t = incomingString.substring(1,2);
+            ClusterIDReceived = t.toInt();
+            String q = incomingString.substring(2,3);
+            ClusterHeadCheck = q.toInt();
+            incomingString = incomingString.substring(6);
 
-          if(ClusterHeadCheck == 1 && IdRecieved!=0 ){
             // Check for Cluster Head overlap 
             PreviousTime = CurrentTime;
             CurrentTime = millis();
@@ -106,24 +112,27 @@ void basestationFSM() {
                 FullArray = true;
               }
 
+              
               // Seperating the packet and store times
               int StringCount = 0;
-              int PacketTimes [NETWORK_NUMBER_OF_NODES] = {0};
-              int TimeIndex = 0;
-
+              bool PacketError = false;
               while(incomingString.length() > 0){
                 int CommaLocation = incomingString.indexOf(',');
                 // Last message
                 if(CommaLocation == -1){
-                  PacketTimes[TimeIndex] = incomingString.toInt();
+                  int check = incomingString.toInt();
+                  if(check <= PACKETTHRESHOLD){
+                    PacketError = true;
+                  }
                   break;
                 }
                 // Time messages
                 else{
                   if(StringCount % 2 == 1){
-                    String Holder = incomingString.substring(0,CommaLocation);
-                    PacketTimes[TimeIndex] = Holder.toInt();
-                    TimeIndex++;   
+                    int check = incomingString.toInt();
+                    if(check <= PACKETTHRESHOLD){
+                      PacketError = true;
+                    }
                   }
                 }
                 // Update Counter
@@ -131,25 +140,11 @@ void basestationFSM() {
                 StringCount++;
               }
 
-              // Check Packet for erros
-              if(PacketTimes[1] != 0){
-              unsigned long CurrentMessageTime = (unsigned long) TIME_SLOT;
-              for(int MessageTimeCheck = 0; MessageTimeCheck <= TimeIndex; MessageTimeCheck++){
-                  int MessageTime = PacketTimes[MessageTimeCheck];
-                  if(MessageTime >= TIME_SLOT*NETWORK_NUMBER_OF_NODES){
-                    MessageTime = TIME_SLOT;
-                  }
-                  CurrentMessageTime = (unsigned long)MessageTime;
-                  unsigned long Error = (unsigned long)(TIME_SLOT +(TIME_SLOT - PACKETTHRESHOLD));
-
-                  if(CurrentMessageTime >= Error || CurrentMessageTime <= PACKETTHRESHOLD){
-                    packet = packet + IdRecieved+ClusterIDReceived+"OP";
-                    Serial.println(packet);
-                    packet = "";
-                    break;
-                  }
-              } 
-            }  
+              if(PacketError){
+                packet = packet + IdRecieved+ClusterIDReceived+"OP";
+                Serial.println(packet);
+                packet = "";
+              }
             }
           }  
       } 
