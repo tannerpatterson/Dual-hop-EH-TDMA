@@ -5,7 +5,7 @@ This repository contains the Arduino programs for implementing a multi-hop energ
 ## Authors
 
 - Tanner Patterson, B.S.E.E Student, Ohio Northern University
-  - ORCID: [0000-0000-0000-0000](https://orcid.org/0000-0000-0000-0000)
+  - ORCID: [0009-0004-7237-6944](https://orcid.org/0009-0004-7237-6944)
   - Email: t-patterson@onu.edu
 
 - Robert Hayek, M.S.E.E Student, Northwestern University
