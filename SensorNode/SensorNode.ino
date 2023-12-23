@@ -9,15 +9,15 @@ Copyright (c) 2023, Ohio Northern University, All rights reserved.
 
 // FSM for a sensor node or a cluster head.
 /* GLOBALS */
-const int GLOBAL_ID = 3;  // Node Global ID on the network.
+const int GLOBAL_ID = 1;  // Node Global ID on the network.
 const int CLUSTER_ID = 1;  // ID corresponding to cluster that node belongs to.
-const int CLUSTER_FLAG = 1;  // Whether or not the node serves as a cluster head
+const int CLUSTER_FLAG = 0;  // Whether or not the node serves as a cluster head
 const int NETWORK_NUMBER_OF_NODES = 3; // Number of nodes on the network
 const bool CLUSTER_HEAR = true;  // If cluster flags can hear each other flag
-const int TIME_SLOT = 1000; // In milliseconds (ms) 10^-3
+const int TIME_SLOT = 500; // In milliseconds (ms) 10^-3
 const int ERROR = 60; // Transmission Time
-const long ENERGY_HAVEST_RATE = 80; // Rate at each the energy is harvested
-String HEADER = "3110"; 
+const int ENERGY_HAVEST_RATE = 80; // Rate at each the energy is harvested
+String HEADER = "1100"; 
 
 /* FLAGS... and stuff*/
 bool led_state = false;
@@ -28,6 +28,7 @@ bool firstFlag = false;
 unsigned long CurrentTime = 0;
 unsigned long LastTime = 0;
 unsigned long wait_time = 0;
+
 
 /* Fancy Custer Head Stuff */
 String packet ="";
@@ -54,7 +55,6 @@ bool energyAvailable(int harvestRate) {
 // State Machine
 void nodeFSM() {
   static enum { DEAD, SYNC, WAIT, TRANSMIT } state = SYNC;
-
   switch (state) {
     case DEAD:
       if(energyAvailable(ENERGY_HAVEST_RATE)) {
@@ -85,9 +85,9 @@ void nodeFSM() {
           state = WAIT;
         }
 
-        // Basestation Timeout Recieved (Case cluster out of energy)
-        else if(SyncCheck == "T" && ClusterIDReceived == CLUSTER_ID){
-          int Wait = ((NETWORK_NUMBER_OF_NODES+GLOBAL_ID-GlobalIDReceived)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT;
+        // Basestation Timeout Recieved (Case Network out of energy)
+        else if(SyncCheck == "T"){
+          int Wait = (((NETWORK_NUMBER_OF_NODES+GLOBAL_ID-GlobalIDReceived)%NETWORK_NUMBER_OF_NODES)+NETWORK_NUMBER_OF_NODES)*TIME_SLOT;
           unsigned long WaitMath = (unsigned long) Wait;
           wait_time = CurrentTime+WaitMath;
           state = WAIT;
@@ -95,7 +95,7 @@ void nodeFSM() {
 
           
         // Basestation Overlap Recieved (Case cluster out of order) - MIGHT GET CHANGED
-          if(SyncCheck == "O" && (ClusterIDReceived == CLUSTER_ID || OverlapCheck == "C")){
+          else if(SyncCheck == "O" && (ClusterIDReceived == CLUSTER_ID || OverlapCheck == "C")){
             int Wait;
             if(CLUSTER_FLAG == 1 && OverlapCheck != "C"){
               Wait = (NETWORK_NUMBER_OF_NODES)*TIME_SLOT-ERROR;
@@ -177,10 +177,10 @@ void nodeFSM() {
           }
           
           else if(SyncCheck == "T" && ClusterIDReceived == CLUSTER_ID){
-          int Wait = ((NETWORK_NUMBER_OF_NODES+GLOBAL_ID-GlobalIDReceived)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT;
-          unsigned long WaitMath = (unsigned long) Wait;
-          wait_time = CurrentTime+WaitMath;
-          state = WAIT;
+            int Wait = ((NETWORK_NUMBER_OF_NODES+GLOBAL_ID-GlobalIDReceived)%NETWORK_NUMBER_OF_NODES)*TIME_SLOT;
+            unsigned long WaitMath = (unsigned long) Wait;
+            wait_time = CurrentTime+WaitMath;
+            state = WAIT;
           }
 
           // Store Data
@@ -221,8 +221,6 @@ void nodeFSM() {
         LastTime = CurrentTime;
         BulkPacket = BulkPacket + "," + GLOBAL_ID + "," + Dif;
       }
-      Serial.println(BulkPacket);
-      packet = "";
 
       //Change LED state
       led_state = !led_state;
@@ -230,6 +228,8 @@ void nodeFSM() {
 
       // Check for suffecient energy
       if(energyAvailable(ENERGY_HAVEST_RATE)){
+        Serial.println(BulkPacket);
+        packet = "";
         int Wait = (NETWORK_NUMBER_OF_NODES*TIME_SLOT);
         unsigned long WaitMath = (unsigned long) Wait;
         wait_time = CurrentTime+WaitMath;
@@ -237,6 +237,7 @@ void nodeFSM() {
         state = WAIT;
       }
       else{
+        packet = "";
         state = DEAD;
       }
       break;
