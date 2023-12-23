@@ -8,12 +8,12 @@ Copyright (c) 2023, Ohio Northern University, All rights reserved.
 #define LED 8
 
 /* GLOBALS */
+unsigned long Timeout_phases = (unsigned long) ceil(log(.001)/log(1-.8));
 const int NETWORK_NUMBER_OF_NODES = 3; // Number of nodes on the network
 const int CLUSTERS =  1; // Number of clusters on the network
-const int TIME_SLOT = 1000; // In milliseconds (ms) 10^-3
-const int CLUSTERTHRESHOLD = 930; // In milliseconds threshold for cluster overlap
+const int TIME_SLOT = 500; // In milliseconds (ms) 10^-3
+const int CLUSTERTHRESHOLD = 430; // In milliseconds threshold for cluster overlap
 const int PACKETTHRESHOLD = 70; // In milliseconds threshold for packet overlap
-const int TIME_OUT = 3; // Number of phases till timeout
 const int CLUSTERHEADS [1] ={3}; // Array full of custer head IDS
 unsigned long LastRecievedTime [CLUSTERS] = {0};
 unsigned long OverlapError = 0;
@@ -21,15 +21,6 @@ unsigned long OverlapError = 0;
 /* Timers */
 unsigned long CurrentTime = 0;
 unsigned long PreviousTime = 0;
-
-/* Counters */
-int OutOfEnergyCount = 0;
-int FullArrayCount = 0;
-
-/* Flags */
-bool FullArray = false;
-bool flag = true;
-
 /* Fancy Custer Head Stuff */
 String packet ="";
 String SyncCheck = "";
@@ -47,7 +38,7 @@ void basestationFSM() {
   static enum { START, ACTIVE} state = START;
   switch (state) {
     case START:
-      OverlapError = (unsigned long) (TIME_OUT* TIME_SLOT* NETWORK_NUMBER_OF_NODES);
+      OverlapError = (unsigned long) (Timeout_phases* TIME_SLOT* NETWORK_NUMBER_OF_NODES);
       delay(OverlapError);
       Serial.println("00S0");
       state = ACTIVE;
@@ -56,11 +47,9 @@ void basestationFSM() {
     case ACTIVE:
       // Check for timeout
       unsigned long var = millis()-OverlapError;
-      if(LastRecievedTime[OutOfEnergyCount] < var && FullArray && false){
-        LastRecievedTime[OutOfEnergyCount] = millis();
-        int GlobalID = CLUSTERHEADS[OutOfEnergyCount];
-        int ClusterID = OutOfEnergyCount + 1;
-        packet = packet+GlobalID+ClusterID+"T0";
+      if(CurrentTime <= var && CurrentTime != 0){
+        CurrentTime = millis();
+        packet = packet+IdRecieved+ClusterIDReceived+"T0";
         Serial.println(packet);
         packet = "";
       }
@@ -97,67 +86,51 @@ void basestationFSM() {
               Serial.println(packet);
               packet = "";
             }
-
-            else{            
-              //Fill Time Array (Used for timeout check) 
-              for(int index = 0; index < CLUSTERS; index++){
-                if(IdRecieved == CLUSTERHEADS[index]){
-                  LastRecievedTime[index] = millis();
-                  FullArrayCount++;
+                    
+            // Seperating the packet and store times
+            int StringCount = 0;
+            bool PacketError = false;
+            while(incomingString.length() > 0){
+              int CommaLocation = incomingString.indexOf(',');
+              // Last message
+              if(CommaLocation == -1){
+                int check = incomingString.toInt();
+                if(check <= PACKETTHRESHOLD){
+                  PacketError = true;
                 }
+                break;
               }
-              
-              //Check for full array
-              if(FullArrayCount == TIME_OUT* NETWORK_NUMBER_OF_NODES && !FullArray){
-                FullArray = true;
-              }
-
-              
-              // Seperating the packet and store times
-              int StringCount = 0;
-              bool PacketError = false;
-              while(incomingString.length() > 0){
-                int CommaLocation = incomingString.indexOf(',');
-                // Last message
-                if(CommaLocation == -1){
+              // Time messages
+              else{
+                if(StringCount % 2 == 1){
                   int check = incomingString.toInt();
                   if(check <= PACKETTHRESHOLD){
                     PacketError = true;
                   }
-                  break;
                 }
-                // Time messages
-                else{
-                  if(StringCount % 2 == 1){
-                    int check = incomingString.toInt();
-                    if(check <= PACKETTHRESHOLD){
-                      PacketError = true;
-                    }
-                  }
-                }
-                // Update Counter
-                incomingString = incomingString.substring(CommaLocation+1); 
-                StringCount++;
               }
-
-              if(PacketError){
-                packet = packet + IdRecieved+ClusterIDReceived+"OP";
-                Serial.println(packet);
-                packet = "";
-              }
+              // Update Counter
+              incomingString = incomingString.substring(CommaLocation+1); 
+              StringCount++;
             }
-          }  
+
+            if(PacketError){
+              packet = packet + IdRecieved+ClusterIDReceived+"OP";
+              Serial.println(packet);
+              packet = "";
+            }
+          }
+        }  
       } 
       Serial.flush();
-      OutOfEnergyCount = (OutOfEnergyCount+1)%CLUSTERS;
       break;
 
     default:
       state = START;
       break;
   }
-  }
 }
+
 
 void setup() {
   Serial.begin(9600); // Baud 9600
