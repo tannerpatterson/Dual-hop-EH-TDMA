@@ -1,4 +1,4 @@
-# Multi Hop Energy Harvesting TDMA - MEHTDMA
+# Dual Hop Energy Harvesting TDMA - DEHTDMA
 
 This repository contains the Arduino programs for implementing a multi-hop energy harvesting wireless sensor network (WSN) using the TDMA (Time Division Multiple Access) algorithm. These programs were developed as part of a research paper conducted at Ohio Northern University. 
 
