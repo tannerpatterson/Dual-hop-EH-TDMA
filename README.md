@@ -10,7 +10,7 @@ This repository contains the Arduino programs for implementing a multi-hop energ
 
 - Robert Hayek, M.S.E.E Student, Northwestern University
   - ORCID: [0000-0002-4015-5897](https://orcid.org/0000-0002-4015-5897)
-  - Email: r-hayek@onu.edu
+  - Email: robert.hayek@u.northwestern.edu
 
 - Dr. Ahmed Ammar, Assistant Professor of Electrical & Computer Engineering, Ohio Northern University
   - ORCID: [0000-0001-5907-7043](https://orcid.org/0000-0001-5907-7043)
@@ -23,17 +23,6 @@ Ohio Northern University, Ada, Ohio, United States
 ## Research Paper
 
 The research paper associated with this work can be found [here](link-to-paper).
-
-## Poster Presentation
-
-A poster presentation summarizing the research findings is available [here](link-to-research-colloquium-poster)
-
-## Abstract
-
-The repository contains two Arduino programs:
-
-1. File1
-2. File2
 
 ## Setup and Usage
 
